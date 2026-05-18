@@ -11,6 +11,9 @@ import Unauthorized from "../pages/Unauthorized";
 import TeacherDashboard from "../pages/teacher/Dashboard";
 import TeacherGroups from "../pages/teacher/Groups";
 import Enrollments from "../pages/teacher/Enrollments";
+import TeacherTopics from "../pages/teacher/Topics";
+import TeacherOvas from "../pages/teacher/Ovas";
+import TeacherOvaDetail from "../pages/teacher/OvaDetail";
 
 // ── Páginas del Administrador ────────────────────────────────────────────────
 import AdminDashboard from "../pages/admin/Dashboard";
@@ -53,7 +56,6 @@ export default function AppRouter() {
   return (
     <Router>
       <Routes>
-        {/* ── Rutas Públicas ──────────────────────────────────────────── */}
         <Route path="/login" element={<Login />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
 
@@ -69,7 +71,11 @@ export default function AppRouter() {
           <Route path="dashboard" element={<TeacherDashboard />} />
           <Route path="groups" element={<TeacherGroups />} />
           <Route path="groups/:groupId" element={<Enrollments />} />
-          {/* <Route path="ovas" element={<TeacherOvas />} /> */}
+          
+          <Route path="ovas" element={<TeacherTopics />} />
+          <Route path="ovas/topic/:topicId" element={<TeacherOvas />} />
+          <Route path="ovas/:ovaId" element={<TeacherOvaDetail />} />
+          
           {/* <Route path="results" element={<TeacherResults />} /> */}
           <Route index element={<Navigate to="dashboard" replace />} />
         </Route>
@@ -89,7 +95,6 @@ export default function AppRouter() {
           <Route index element={<Navigate to="dashboard" replace />} />
         </Route>
 
-        {/* ── Fallback ────────────────────────────────────────────────── */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
