@@ -45,7 +45,7 @@ export default function ExamBuilder() {
   const fetchExam = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data } = await api.get(`/api/v1/academic/exams/by-ova/${ovaId}`);
+      const { data } = await api.get(`/api/v1/academic/exams/by-ova/${ovaId}/teacher`);
       // Sort questions and options by order_index
       const sortedExam = { ...data.data };
       if (sortedExam.questions) {

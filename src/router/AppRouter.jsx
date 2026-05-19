@@ -18,6 +18,7 @@ import ExamBuilder from "../pages/teacher/ExamBuilder";
 
 // ── Páginas del Administrador ────────────────────────────────────────────────
 import AdminDashboard from "../pages/admin/Dashboard";
+import AdminUsers from "../pages/admin/Users";
 
 // ── Menús de navegación por rol ──────────────────────────────────────────────
 const TEACHER_MENU = [
@@ -92,7 +93,7 @@ export default function AppRouter() {
           }
         >
           <Route path="dashboard" element={<AdminDashboard />} />
-          {/* <Route path="users" element={<AdminUsers />} /> */}
+          <Route path="users" element={<AdminUsers />} />
           {/* <Route path="groups" element={<AdminGroups />} /> */}
           <Route index element={<Navigate to="dashboard" replace />} />
         </Route>
