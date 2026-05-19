@@ -15,6 +15,7 @@ import TeacherTopics from "../pages/teacher/Topics";
 import TeacherOvas from "../pages/teacher/Ovas";
 import TeacherOvaDetail from "../pages/teacher/OvaDetail";
 import ExamBuilder from "../pages/teacher/ExamBuilder";
+import TeacherResults from "../pages/teacher/Results";
 
 // ── Páginas del Administrador ────────────────────────────────────────────────
 import AdminDashboard from "../pages/admin/Dashboard";
@@ -79,7 +80,7 @@ export default function AppRouter() {
           <Route path="ovas/:ovaId" element={<TeacherOvaDetail />} />
           <Route path="ovas/:ovaId/exam" element={<ExamBuilder />} />
           
-          {/* <Route path="results" element={<TeacherResults />} /> */}
+          <Route path="results" element={<TeacherResults />} />
           <Route index element={<Navigate to="dashboard" replace />} />
         </Route>
 
