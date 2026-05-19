@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Plus, Pencil, Trash2, Video, FileText, Link as LinkIcon, File } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Video, FileText, Link as LinkIcon, File, ClipboardCheck } from "lucide-react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "../../api/client";
 import DataTable from "../../components/DataTable";
@@ -166,6 +166,13 @@ export default function OvaDetail() {
           <h1 className="text-2xl font-bold text-gray-800">{ova?.title || "Cargando..."}</h1>
           <p className="text-gray-500 text-sm mt-0.5">Materiales y recursos de este OVA.</p>
         </div>
+        <button
+          onClick={() => navigate(`/teacher/ovas/${ovaId}/exam`, { state: { ovaName: ova?.title }})}
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors shadow-sm text-sm"
+        >
+          <ClipboardCheck size={18} />
+          Configurar Examen
+        </button>
         <button onClick={() => openModal()} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors shadow-sm text-sm">
           <Plus size={18} />
           Añadir Recurso
