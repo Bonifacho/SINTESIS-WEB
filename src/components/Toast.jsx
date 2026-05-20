@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from "lucide-react";
 
 /**
@@ -83,18 +83,18 @@ let toastIdCounter = 0;
 export function useToast() {
   const [toasts, setToasts] = useState([]);
 
-  const showToast = (message, type = "info") => {
+  const showToast = useCallback((message, type = "info") => {
     const id = ++toastIdCounter;
     setToasts((prev) => [...prev, { id, message, type }]);
-  };
+  }, []);
 
-  const removeToast = (id) => {
+  const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  }, []);
 
-  const ToastWrapper = () => (
+  const ToastWrapper = useCallback(() => (
     <ToastContainer toasts={toasts} removeToast={removeToast} />
-  );
+  ), [toasts, removeToast]);
 
   return { showToast, ToastContainer: ToastWrapper };
 }

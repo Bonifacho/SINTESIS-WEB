@@ -7,9 +7,25 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     @apply bg-gray-50 text-gray-800 antialiased;
   }
+
+  /* Scrollbar personalizada */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
 }
 
-/* ── Animaciones personalizadas para Modal y Toast ────────────────────────── */
+/* ── Animaciones personalizadas ────────────────────────────────────────────── */
+
 @keyframes modal-in {
   from {
     opacity: 0;
@@ -32,10 +48,70 @@
   }
 }
 
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
 .animate-modal-in {
-  animation: modal-in 0.2s ease-out;
+  animation: modal-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .animate-slide-in {
-  animation: slide-in 0.3s ease-out;
+  animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-slide-down {
+  animation: slide-down 0.2s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out;
+}
+
+/* ── Focus Ring Global ─────────────────────────────────────────────────────── */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  @apply outline-none ring-2 ring-indigo-500/50 ring-offset-1;
+}
+
+/* ── Transitions suaves para todas las cards ──────────────────────────────── */
+@layer utilities {
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+  }
+
+  .btn-primary {
+    @apply bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-semibold 
+           px-4 py-2 rounded-lg transition-all duration-150 shadow-sm;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-500 active:scale-[0.98] text-white font-semibold 
+           px-4 py-2 rounded-lg transition-all duration-150 shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply border border-gray-200 hover:bg-gray-50 active:scale-[0.98] font-medium 
+           px-4 py-2 rounded-lg transition-all duration-150;
+  }
 }

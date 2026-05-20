@@ -20,6 +20,7 @@ import TeacherResults from "../pages/teacher/Results";
 // ── Páginas del Administrador ────────────────────────────────────────────────
 import AdminDashboard from "../pages/admin/Dashboard";
 import AdminUsers from "../pages/admin/Users";
+import AdminActivities from "../pages/admin/Activities";
 
 // ── Menús de navegación por rol ──────────────────────────────────────────────
 const TEACHER_MENU = [
@@ -32,7 +33,7 @@ const TEACHER_MENU = [
 const ADMIN_MENU = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" },
   { label: "Gestión de Usuarios", icon: Users, path: "/admin/users" },
-  { label: "Todos los Grupos", icon: BookOpen, path: "/admin/groups" },
+  { label: "Actividades", icon: BookOpen, path: "/admin/activities" },
 ];
 
 function TeacherLayout() {
@@ -95,7 +96,7 @@ export default function AppRouter() {
         >
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
-          {/* <Route path="groups" element={<AdminGroups />} /> */}
+          <Route path="activities" element={<AdminActivities />} />
           <Route index element={<Navigate to="dashboard" replace />} />
         </Route>
 
