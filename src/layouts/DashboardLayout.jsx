@@ -1,5 +1,6 @@
 import { LogOut, Menu, X } from "lucide-react";
 import { useNavigate, useLocation, Link, Outlet } from "react-router-dom";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 
@@ -18,9 +19,13 @@ export default function DashboardLayout({ menuItems = [], panelTitle = "Panel", 
   const location = useLocation();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     await logout();
+    setIsLoggingOut(false);
     navigate("/login", { replace: true });
   };
 
@@ -77,7 +82,7 @@ export default function DashboardLayout({ menuItems = [], panelTitle = "Panel", 
       {/* Logout */}
       <div className="p-4 border-t border-slate-700/50">
         <button
-          onClick={handleLogout}
+          onClick={() => setIsLogoutConfirmOpen(true)}
           className="w-full flex items-center gap-3 px-4 py-2.5 text-red-400 hover:bg-red-900/20 rounded-lg transition-colors text-sm font-medium"
         >
           <LogOut size={18} />
@@ -131,6 +136,17 @@ export default function DashboardLayout({ menuItems = [], panelTitle = "Panel", 
           <Outlet />
         </main>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isLogoutConfirmOpen}
+        onClose={() => setIsLogoutConfirmOpen(false)}
+        onConfirm={handleLogout}
+        title="Cerrar Sesión"
+        message="¿Estás seguro de que deseas salir del portal SÍNTESIS?"
+        confirmText="Salir"
+        isLoading={isLoggingOut}
+      />
     </div>
   );
 }

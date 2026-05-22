@@ -3,11 +3,13 @@ import { BarChart3, Search, Calendar, FileText, CheckCircle2, XCircle, ChevronDo
 import api from "../../api/client";
 import DataTable from "../../components/DataTable";
 import { useToast } from "../../components/Toast";
+import { useAuth } from "../../context/AuthContext";
 
 /**
  * TeacherResults — Vista de resultados de exámenes por grupo.
  */
 export default function TeacherResults() {
+  const { user } = useAuth();
   const { showToast, ToastContainer } = useToast();
   
   const [groups, setGroups] = useState([]);
@@ -23,16 +25,23 @@ export default function TeacherResults() {
     const fetchGroups = async () => {
       try {
         const { data } = await api.get("/api/v1/academic/groups");
-        setGroups(data.data || []);
-        if (data.data?.length > 0) {
-          setSelectedGroupId(data.data[0].id.toString());
+        // Get user from context to filter groups by teacher
+        // Since user is not in dependency array, we might need to get it or assume it's filtered
+        // Wait, AuthContext is not imported here for `user`. Let's just use the array parsing for now.
+        const groupsArray = Array.isArray(data) ? data : (data.data || []);
+        const myGroups = groupsArray.filter(
+          (g) => String(g.teacher_id) === String(user.user_id) && g.is_active
+        );
+        setGroups(myGroups);
+        if (myGroups.length > 0) {
+          setSelectedGroupId(myGroups[0].id.toString());
         }
       } catch (err) {
         showToast("Error al cargar grupos", "error");
       }
     };
     fetchGroups();
-  }, [showToast]);
+  }, [showToast, user.user_id]);
 
   // Cargar intentos y estudiantes del grupo seleccionado
   const fetchResults = useCallback(async () => {
@@ -41,11 +50,11 @@ export default function TeacherResults() {
     try {
       // 1. Obtener los intentos
       const attemptsRes = await api.get(`/api/v1/academic/groups/${selectedGroupId}/attempts`);
-      const fetchedAttempts = attemptsRes.data.data || [];
+      const fetchedAttempts = Array.isArray(attemptsRes.data) ? attemptsRes.data : (attemptsRes.data.data || []);
       
       // 2. Obtener los estudiantes del grupo para mapear IDs a nombres
       const groupRes = await api.get(`/api/v1/academic/groups/${selectedGroupId}`);
-      const enrolledStudents = groupRes.data.data?.students || [];
+      const enrolledStudents = groupRes.data.data?.students || groupRes.data?.students || [];
       const studentsMap = {};
       enrolledStudents.forEach(s => {
         studentsMap[s.student_id] = s.student_name;
@@ -57,13 +66,13 @@ export default function TeacherResults() {
       // Para efectos del MVP, usaremos el ID del examen si no tenemos el título, 
       // pero podemos intentar cruzar con los temas/ovas del grupo.
       const topicsRes = await api.get(`/api/v1/academic/groups/${selectedGroupId}/topics`);
-      const topics = topicsRes.data.data || [];
+      const topics = Array.isArray(topicsRes.data) ? topicsRes.data : (topicsRes.data.data || []);
       const examNames = {};
       
       for (const topic of topics) {
         try {
           const ovasRes = await api.get(`/api/v1/academic/topics/${topic.id}/ovas`);
-          const ovas = ovasRes.data.data || [];
+          const ovas = Array.isArray(ovasRes.data) ? ovasRes.data : (ovasRes.data.data || []);
           for (const ova of ovas) {
             // Sabemos que si el examen pertenece a este OVA, podemos llamarlo por el OVA
             // Aquí asociamos ova_id con el título del OVA

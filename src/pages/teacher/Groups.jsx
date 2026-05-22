@@ -41,8 +41,9 @@ export default function TeacherGroups() {
     try {
       const { data } = await api.get("/api/v1/academic/groups");
       // Filtrar solo los grupos del docente actual y que estén activos
-      const myGroups = (data.data || []).filter(
-        (g) => g.teacher_id === user.user_id && g.is_active
+      const groupsArray = Array.isArray(data) ? data : (data.data || []);
+      const myGroups = groupsArray.filter(
+        (g) => String(g.teacher_id) === String(user.user_id) && g.is_active
       );
       setGroups(myGroups);
     } catch (err) {

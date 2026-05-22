@@ -36,8 +36,9 @@ export default function Topics() {
   const fetchGroups = useCallback(async () => {
     try {
       const { data } = await api.get("/api/v1/academic/groups");
-      const myGroups = (data.data || []).filter(
-        (g) => g.teacher_id === user.user_id && g.is_active
+      const groupsArray = Array.isArray(data) ? data : (data.data || []);
+      const myGroups = groupsArray.filter(
+        (g) => String(g.teacher_id) === String(user.user_id) && g.is_active
       );
       setGroups(myGroups);
       if (myGroups.length > 0 && !selectedGroupId) {
@@ -58,7 +59,8 @@ export default function Topics() {
     setIsLoading(true);
     try {
       const { data } = await api.get(`/api/v1/academic/groups/${selectedGroupId}/topics`);
-      const activeTopics = (data.data || []).filter((t) => t.is_active);
+      const topicsArray = Array.isArray(data) ? data : (data.data || []);
+      const activeTopics = topicsArray.filter((t) => t.is_active);
       setTopics(activeTopics);
     } catch (err) {
       showToast("Error al cargar los temas", "error");
