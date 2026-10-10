@@ -60,7 +60,8 @@ export default function Topics() {
     try {
       const { data } = await api.get(`/api/v1/academic/groups/${selectedGroupId}/topics`);
       const topicsArray = Array.isArray(data) ? data : (data.data || []);
-      const activeTopics = topicsArray.filter((t) => t.is_active);
+      // Si el backend no envía is_active, asumimos que es activo
+      const activeTopics = topicsArray.filter((t) => t.is_active === undefined || t.is_active);
       setTopics(activeTopics);
     } catch (err) {
       showToast("Error al cargar los temas", "error");

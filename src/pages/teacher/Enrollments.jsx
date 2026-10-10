@@ -58,7 +58,7 @@ export default function Enrollments() {
       setGroupName(group?.name || `Grupo #${groupId}`);
 
       // Enriquecer las matrículas con datos del estudiante
-      const enrollData = (enrollRes.data.data || []).filter((e) => e.is_active);
+      const enrollData = (enrollRes.data.data || []).filter((e) => e.is_active === undefined || e.is_active);
       const enriched = enrollData.map((enrollment) => {
         const student = usersData.find((u) => u.id === enrollment.student_id);
         return {
@@ -85,7 +85,7 @@ export default function Enrollments() {
   const enrolledStudentIds = new Set(enrollments.map((e) => e.student_id));
   const availableStudents = allUsers.filter((u) => {
     const isStudent = u.roles?.includes("estudiante");
-    const isActive = u.is_active;
+    const isActive = u.is_active === undefined || u.is_active;
     const notEnrolled = !enrolledStudentIds.has(u.id);
     const matchesSearch =
       !searchQuery ||

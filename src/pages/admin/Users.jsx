@@ -37,6 +37,7 @@ export default function AdminUsers() {
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState("");
+  const [editingUser, setEditingUser] = useState(null);
 
   // Modal Ver Usuario
   const [viewTarget, setViewTarget] = useState(null);
@@ -64,43 +65,70 @@ export default function AdminUsers() {
     fetchUsers();
   }, [fetchUsers]);
 
-  // ── Crear usuario ────────────────────────────────────────────────────────
-  const handleRegister = async (e) => {
+  // ── Guardar usuario (Crear / Editar) ─────────────────────────────────────
+  const handleSave = async (e) => {
     e.preventDefault();
     setFormError("");
 
     // Validación local básica
-    if (formData.password.length < 6) {
-      setFormError("La contraseña debe tener al menos 6 caracteres.");
-      return;
-    }
     if (formData.document_id.length < 5) {
       setFormError("El documento de identidad debe tener al menos 5 dígitos.");
+      return;
+    }
+    if (!editingUser && formData.password.length < 6) {
+      setFormError("La contraseña debe tener al menos 6 caracteres.");
       return;
     }
 
     setIsSaving(true);
     try {
-      await api.post("/api/v1/security/admin/register", formData);
-      showToast(`Usuario "${formData.username}" creado exitosamente`, "success");
+      if (editingUser) {
+        await api.put(`/api/v1/security/users/${editingUser.id}`, {
+          first_name: formData.first_name.trim(),
+          last_name: formData.last_name.trim(),
+          document_id: formData.document_id.trim(),
+          role_name: formData.role_name // Enviamos el rol al backend
+        });
+        showToast(`Usuario "${formData.username}" actualizado exitosamente`, "success");
+      } else {
+        await api.post("/api/v1/security/admin/register", formData);
+        showToast(`Usuario "${formData.username}" creado exitosamente`, "success");
+      }
       setModalOpen(false);
       setFormData(INITIAL_FORM);
       setShowPassword(false);
+      setEditingUser(null);
       fetchUsers();
     } catch (err) {
       const msg =
         err.response?.data?.error ||
         err.response?.data?.message ||
         err.response?.data?.msg ||
-        "Error al crear usuario. Verifica que el nombre de usuario no exista.";
+        "Error al guardar usuario. Verifica que los datos sean correctos.";
       setFormError(msg);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleOpenModal = () => {
-    setFormData(INITIAL_FORM);
+  const handleOpenModal = (user = null) => {
+    if (user) {
+      setEditingUser(user);
+      const parts = (user.full_name || "").split(" ");
+      const first_name = parts[0] || "";
+      const last_name = parts.slice(1).join(" ") || "";
+      setFormData({
+        first_name,
+        last_name,
+        document_id: user.document_id || "",
+        username: user.username || "",
+        password: "", // no soportado en update básico
+        role_name: user.roles?.[0] || "docente"
+      });
+    } else {
+      setEditingUser(null);
+      setFormData(INITIAL_FORM);
+    }
     setFormError("");
     setShowPassword(false);
     setModalOpen(true);
@@ -173,6 +201,7 @@ export default function AdminUsers() {
           {(roles || []).map(r => (
             <span key={r} className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
               r === 'administrador' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+              r === 'practicante'   ? 'bg-cyan-50 text-cyan-700 border-cyan-200' :
               r === 'docente'       ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
                                       'bg-emerald-50 text-emerald-700 border-emerald-200'
             }`}>
@@ -199,6 +228,13 @@ export default function AdminUsers() {
       label: "Acciones",
       render: (_, row) => (
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => handleOpenModal(row)}
+            className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+            title="Editar datos del usuario"
+          >
+            <UserCog size={16} />
+          </button>
           <button
             onClick={() => setViewTarget(row)}
             className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
@@ -250,7 +286,7 @@ export default function AdminUsers() {
             <RefreshCw size={17} className={isLoading ? "animate-spin" : ""} />
           </button>
           <button
-            onClick={handleOpenModal}
+            onClick={() => handleOpenModal()}
             className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 active:scale-[0.98] text-white font-medium py-2.5 px-4 rounded-lg transition-all shadow-sm text-sm"
           >
             <Plus size={18} />
@@ -298,6 +334,7 @@ export default function AdminUsers() {
           <option value="estudiante">Estudiantes</option>
           <option value="docente">Docentes</option>
           <option value="administrador">Administradores</option>
+          <option value="practicante">Practicantes</option>
         </select>
       </div>
 
@@ -313,9 +350,9 @@ export default function AdminUsers() {
         }
       />
 
-      {/* ── Modal Crear Usuario ──────────────────────────────────────────── */}
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Registrar Nuevo Usuario" size="md">
-        <form onSubmit={handleRegister} className="space-y-4">
+      {/* ── Modal Crear/Editar Usuario ──────────────────────────────────────────── */}
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingUser ? "Editar Usuario" : "Registrar Nuevo Usuario"} size="md">
+        <form onSubmit={handleSave} className="space-y-4">
           {/* Error global del formulario */}
           {formError && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 flex items-start gap-2">
@@ -368,58 +405,65 @@ export default function AdminUsers() {
                 type="text"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/\s/g, "") })}
-                className="w-full px-3.5 py-2 border border-gray-200 rounded-lg outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all text-sm"
+                className="w-full px-3.5 py-2 border border-gray-200 rounded-lg outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all text-sm disabled:bg-gray-100 disabled:text-gray-500"
                 placeholder="ej: profemaria"
                 required
+                disabled={!!editingUser}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Contraseña *</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3.5 py-2 pr-10 border border-gray-200 rounded-lg outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all text-sm"
-                  placeholder="mín. 6 caracteres"
-                  required
-                  minLength={6}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 transition-colors"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
+            {!editingUser && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Contraseña *</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-3.5 py-2 pr-10 border border-gray-200 rounded-lg outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all text-sm"
+                    placeholder="mín. 6 caracteres"
+                    required={!editingUser}
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Rol a Asignar *</label>
-            <div className="grid grid-cols-3 gap-2">
-              {["docente", "estudiante", "administrador"].map(role => (
-                <button
-                  key={role}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role_name: role })}
-                  className={`py-2 px-3 rounded-lg border text-sm font-medium transition-all capitalize ${
-                    formData.role_name === role
-                      ? role === "administrador"
-                        ? "bg-purple-50 border-purple-400 text-purple-700"
-                        : role === "docente"
-                          ? "bg-indigo-50 border-indigo-400 text-indigo-700"
-                          : "bg-emerald-50 border-emerald-400 text-emerald-700"
-                      : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  {role}
-                </button>
-              ))}
+          {(!editingUser || !editingUser.roles?.includes("administrador")) && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Rol a Asignar *</label>
+              <div className="grid grid-cols-3 gap-2">
+                {["docente", "estudiante", "practicante"].map(role => {
+                  return (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, role_name: role })}
+                      className={`py-2 px-3 rounded-lg border text-sm font-medium transition-all capitalize ${
+                        formData.role_name === role
+                          ? role === "practicante"
+                            ? "bg-cyan-50 border-cyan-400 text-cyan-700"
+                            : role === "docente"
+                              ? "bg-indigo-50 border-indigo-400 text-indigo-700"
+                              : "bg-emerald-50 border-emerald-400 text-emerald-700"
+                          : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      {role}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             <button
@@ -437,12 +481,12 @@ export default function AdminUsers() {
               {isSaving ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Creando...
+                  Guardando...
                 </>
               ) : (
                 <>
-                  <Plus size={16} />
-                  Crear Usuario
+                  {editingUser ? <UserCog size={16} /> : <Plus size={16} />}
+                  {editingUser ? "Guardar Cambios" : "Crear Usuario"}
                 </>
               )}
             </button>
@@ -474,6 +518,7 @@ export default function AdminUsers() {
                   {(viewTarget.roles || []).map(r => (
                     <span key={r} className={`px-2 py-0.5 rounded text-xs font-semibold ${
                       r === 'administrador' ? 'bg-purple-100 text-purple-700' :
+                      r === 'practicante'   ? 'bg-cyan-100 text-cyan-700' :
                       r === 'docente'       ? 'bg-indigo-100 text-indigo-700' :
                                               'bg-emerald-100 text-emerald-700'
                     }`}>{r}</span>

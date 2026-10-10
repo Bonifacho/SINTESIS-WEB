@@ -35,7 +35,8 @@ export default function Ovas() {
     setIsLoading(true);
     try {
       const { data } = await api.get(`/api/v1/academic/topics/${topicId}/ovas`);
-      const activeOvas = (data.data || []).filter((o) => o.is_active);
+      const ovasArray = Array.isArray(data) ? data : (data.data || []);
+      const activeOvas = ovasArray.filter((o) => o.is_active === undefined || o.is_active);
       setOvas(activeOvas);
     } catch (err) {
       showToast("Error al cargar los OVAs", "error");

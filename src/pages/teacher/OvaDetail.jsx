@@ -35,7 +35,7 @@ export default function OvaDetail() {
     try {
       const { data } = await api.get(`/api/v1/academic/ovas/${ovaId}`);
       setOva(data.data);
-      const activeResources = (data.data.resources || []).filter((r) => r.is_active);
+      const activeResources = (data.data.resources || []).filter((r) => r.is_active === undefined || r.is_active);
       // Sort por order_index
       activeResources.sort((a, b) => a.order_index - b.order_index);
       setResources(activeResources);
