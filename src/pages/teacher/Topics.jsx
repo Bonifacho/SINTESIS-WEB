@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Plus, Pencil, Trash2, FolderOpen, ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import DataTable from "../../components/DataTable";
@@ -15,10 +15,13 @@ import { useToast } from "../../components/Toast";
 export default function Topics() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast, ToastContainer } = useToast();
 
   const [groups, setGroups] = useState([]);
-  const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [selectedGroupId, setSelectedGroupId] = useState(
+    location.state?.groupId ? String(location.state.groupId) : ""
+  );
   const [topics, setTopics] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,6 +35,13 @@ export default function Topics() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // ── Sincronizar selección si cambia la navegación externa ──────────────────
+  useEffect(() => {
+    if (location.state?.groupId) {
+      setSelectedGroupId(String(location.state.groupId));
+    }
+  }, [location.state?.groupId]);
+
   // ── Cargar grupos del docente ──────────────────────────────────────────
   const fetchGroups = useCallback(async () => {
     try {
@@ -41,13 +51,18 @@ export default function Topics() {
         (g) => String(g.teacher_id) === String(user.user_id) && g.is_active
       );
       setGroups(myGroups);
-      if (myGroups.length > 0 && !selectedGroupId) {
-        setSelectedGroupId(myGroups[0].id.toString());
+      if (myGroups.length > 0) {
+        const navGroupId = location.state?.groupId ? String(location.state.groupId) : null;
+        if (navGroupId && myGroups.some((g) => String(g.id) === navGroupId)) {
+          setSelectedGroupId(navGroupId);
+        } else if (!selectedGroupId) {
+          setSelectedGroupId(myGroups[0].id.toString());
+        }
       }
     } catch (err) {
       showToast("Error al cargar los grupos", "error");
     }
-  }, [user.user_id, showToast, selectedGroupId]);
+  }, [user.user_id, showToast, selectedGroupId, location.state?.groupId]);
 
   useEffect(() => {
     fetchGroups();

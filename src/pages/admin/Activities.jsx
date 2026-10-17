@@ -10,16 +10,19 @@ import LoadingSpinner from "../../components/LoadingSpinner";
 export default function AdminActivities() {
   const [groups, setGroups] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [search, setSearch] = useState("");
   const [expandedGroup, setExpandedGroup] = useState(null);
 
   const fetchGroups = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
-      const { data } = await api.get("/api/v1/groups");
+      const { data } = await api.get("/api/v1/academic/groups");
       setGroups(data.data || data || []);
-    } catch {
+    } catch (err) {
       setGroups([]);
+      setLoadError(err.response?.data?.error || "No se pudieron cargar los grupos.");
     } finally {
       setIsLoading(false);
     }
@@ -75,6 +78,10 @@ export default function AdminActivities() {
       {isLoading ? (
         <div className="flex justify-center py-16">
           <LoadingSpinner size="lg" />
+        </div>
+      ) : loadError ? (
+        <div className="bg-red-50 rounded-xl border border-red-200 p-8 text-center">
+          <p className="text-red-600 text-sm font-medium">{loadError}</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
@@ -173,7 +180,7 @@ function GroupDetails({ groupId }) {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const { data } = await api.get(`/api/v1/groups/${groupId}/topics`);
+        const { data } = await api.get(`/api/v1/academic/groups/${groupId}/topics`);
         setTopics(data.data || data || []);
       } catch {
         setTopics([]);
