@@ -19,17 +19,17 @@ const ICONS = {
 };
 
 const STYLES = {
-  success: "bg-emerald-50 border-emerald-200 text-emerald-800",
-  error: "bg-red-50 border-red-200 text-red-800",
-  warning: "bg-amber-50 border-amber-200 text-amber-800",
-  info: "bg-blue-50 border-blue-200 text-blue-800",
+  success: "bg-emerald-50/95 border-emerald-200/80 text-emerald-900 shadow-emerald-500/10",
+  error: "bg-rose-50/95 border-rose-200/80 text-rose-900 shadow-rose-500/10",
+  warning: "bg-amber-50/95 border-amber-200/80 text-amber-900 shadow-amber-500/10",
+  info: "bg-indigo-50/95 border-indigo-200/80 text-indigo-900 shadow-indigo-500/10",
 };
 
 const ICON_STYLES = {
-  success: "text-emerald-500",
-  error: "text-red-500",
-  warning: "text-amber-500",
-  info: "text-blue-500",
+  success: "text-emerald-600",
+  error: "text-rose-600",
+  warning: "text-amber-600",
+  info: "text-indigo-600",
 };
 
 function Toast({ message, type = "info", onClose }) {
@@ -42,11 +42,11 @@ function Toast({ message, type = "info", onClose }) {
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 rounded-lg border shadow-lg max-w-sm animate-slide-in ${STYLES[type]}`}
+      className={`flex items-start gap-3 px-4 py-3 rounded-xl border shadow-xl backdrop-blur-md max-w-sm animate-slide-in ${STYLES[type]}`}
     >
       <Icon size={18} className={`shrink-0 mt-0.5 ${ICON_STYLES[type]}`} />
-      <p className="text-sm font-medium flex-1">{message}</p>
-      <button onClick={onClose} className="shrink-0 opacity-50 hover:opacity-100 transition-opacity">
+      <p className="text-sm font-medium flex-1 leading-snug">{message}</p>
+      <button onClick={onClose} className="shrink-0 opacity-40 hover:opacity-100 transition-opacity p-0.5">
         <X size={14} />
       </button>
     </div>

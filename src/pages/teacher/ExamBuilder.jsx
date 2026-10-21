@@ -203,18 +203,27 @@ export default function ExamBuilder() {
   return (
     <>
       <ToastContainer />
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => navigate(-1)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
-          <ArrowLeft size={20} />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-800">Constructor de Examen</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Asociado a: {ovaName}</p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3.5">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200/60"
+            title="Volver"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Constructor de Examen</h1>
+            <p className="text-slate-500 text-sm mt-0.5">Asociado al OVA: <span className="font-semibold text-slate-700">{ovaName}</span></p>
+          </div>
         </div>
         {exam && (
-          <button onClick={openExamModal} className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-2.5 px-4 rounded-lg transition-colors shadow-sm text-sm">
-            <Settings size={18} />
-            Configuración
+          <button 
+            onClick={openExamModal} 
+            className="flex items-center gap-2 bg-white border border-slate-200/80 hover:bg-slate-50 active:scale-[0.98] text-slate-700 font-medium py-2.5 px-4 rounded-xl transition-all shadow-xs text-sm"
+          >
+            <Settings size={18} className="text-slate-500" />
+            Configuración del Examen
           </button>
         )}
       </div>
@@ -224,27 +233,38 @@ export default function ExamBuilder() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
         </div>
       ) : !exam ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center mt-6">
-          <CheckCircle2 size={48} className="mx-auto text-gray-300 mb-4" />
-          <h3 className="text-xl font-medium text-gray-700 mb-2">Este OVA no tiene examen</h3>
-          <p className="text-gray-500 text-sm max-w-md mx-auto mb-6">
-            Crea un examen para evaluar los conocimientos adquiridos en este Objeto Virtual de Aprendizaje.
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-12 text-center mt-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100/60 mb-4">
+            <CheckCircle2 size={32} className="text-indigo-600" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Este OVA aún no tiene examen</h3>
+          <p className="text-slate-500 text-sm max-w-md mx-auto mb-6 leading-relaxed">
+            Crea una evaluación interactiva con preguntas de opción múltiple para medir el aprendizaje de tus estudiantes en este tema.
           </p>
-          <button onClick={openExamModal} className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg transition-colors shadow-sm">
+          <button 
+            onClick={openExamModal} 
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-medium py-3 px-6 rounded-xl transition-all shadow-sm shadow-indigo-200 text-sm"
+          >
             <Plus size={18} />
-            Comenzar a Crear Examen
+            Crear Evaluación Ahora
           </button>
         </div>
       ) : (
         <div className="space-y-6">
           {/* Cabecera del Examen */}
-          <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl shadow-md p-6 text-white flex justify-between items-center">
+          <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 rounded-2xl shadow-lg shadow-indigo-600/15 p-6 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h2 className="text-2xl font-bold mb-1">{exam.title}</h2>
-              <div className="flex gap-4 text-indigo-100 text-sm">
-                <span>Puntaje mínimo: {exam.passing_score}%</span>
-                <span>Intentos permitidos: {exam.max_attempts}</span>
-                <span>Preguntas: {exam.questions?.length || 0}</span>
+              <h2 className="text-2xl font-bold tracking-tight mb-2">{exam.title}</h2>
+              <div className="flex flex-wrap gap-2 text-sm">
+                <span className="bg-white/15 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-xl text-xs font-semibold text-white">
+                  Aprobación mínima: {exam.passing_score}%
+                </span>
+                <span className="bg-white/15 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-xl text-xs font-semibold text-white">
+                  Intentos permitidos: {exam.max_attempts}
+                </span>
+                <span className="bg-white/15 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-xl text-xs font-semibold text-white">
+                  Preguntas: {exam.questions?.length || 0}
+                </span>
               </div>
             </div>
             <button
@@ -253,7 +273,7 @@ export default function ExamBuilder() {
                 setQuestionForm({ statement: "", points: 1 });
                 setQuestionModalOpen(true);
               }}
-              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
+              className="flex items-center gap-2 bg-white text-indigo-700 hover:bg-indigo-50 active:scale-[0.98] font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm text-sm shrink-0"
             >
               <Plus size={18} />
               Añadir Pregunta
@@ -262,87 +282,98 @@ export default function ExamBuilder() {
 
           {/* Lista de Preguntas */}
           {exam.questions?.length === 0 ? (
-            <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-10 text-center">
-              <p className="text-gray-500">Aún no hay preguntas en este examen.</p>
+            <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center">
+              <p className="text-slate-500 font-medium">Aún no has agregado preguntas a este examen.</p>
+              <p className="text-slate-400 text-xs mt-1">Haz clic en "Añadir Pregunta" arriba para comenzar a estructurar la evaluación.</p>
             </div>
           ) : (
             <div className="space-y-4">
               {exam.questions.map((q, index) => (
-                <div key={q.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div key={q.id} className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden hover:shadow-md transition-all duration-200">
                   {/* Cabecera de la Pregunta */}
-                  <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-start gap-4">
-                    <div className="flex gap-3">
-                      <span className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">
+                  <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex justify-between items-start gap-4">
+                    <div className="flex items-start gap-3.5">
+                      <span className="flex-shrink-0 w-8 h-8 rounded-xl bg-indigo-100/80 text-indigo-700 flex items-center justify-center font-bold text-sm">
                         {index + 1}
                       </span>
                       <div>
-                        <h3 className="font-medium text-gray-800 text-lg">{q.statement}</h3>
-                        <span className="text-xs text-gray-500">Valor: {q.points} {q.points === 1 ? 'punto' : 'puntos'}</span>
+                        <h3 className="font-bold text-slate-800 text-base leading-snug">{q.statement}</h3>
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100/60 mt-1">
+                          {q.points} {q.points === 1 ? 'punto' : 'puntos'}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => {
                           setEditingQuestion(q);
                           setQuestionForm({ statement: q.statement, points: q.points });
                           setQuestionModalOpen(true);
                         }}
-                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
                         title="Editar Pregunta"
                       >
-                        <Pencil size={18} />
+                        <Pencil size={17} />
                       </button>
                       <button
                         onClick={() => setDeleteQuestionTarget(q)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
                         title="Eliminar Pregunta"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={17} />
                       </button>
                     </div>
                   </div>
 
                   {/* Opciones */}
                   <div className="p-6">
-                    <div className="space-y-2 mb-4">
+                    <div className="space-y-2.5 mb-4">
                       {q.options.map((opt) => {
                         const isCorrect = q.correct_option_id === opt.id;
                         return (
                           <div 
                             key={opt.id}
-                            className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
-                              isCorrect ? "border-emerald-500 bg-emerald-50" : "border-gray-200 hover:border-gray-300"
+                            className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
+                              isCorrect 
+                                ? "border-emerald-500 bg-emerald-50/70 shadow-xs ring-1 ring-emerald-500/20" 
+                                : "border-slate-200/80 bg-white hover:border-slate-300"
                             }`}
                           >
-                            <label className="flex items-center gap-3 cursor-pointer flex-1">
+                            <label className="flex items-center gap-3 cursor-pointer flex-1 select-none">
                               <input
                                 type="radio"
                                 name={`correct_option_${q.id}`}
                                 checked={isCorrect}
                                 onChange={() => handleSetCorrectOption(q.id, opt.id)}
-                                className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                                className="w-4 h-4 text-emerald-600 border-slate-300 focus:ring-emerald-500"
                               />
-                              <span className={`text-sm ${isCorrect ? "text-emerald-800 font-medium" : "text-gray-700"}`}>
+                              <span className={`text-sm ${isCorrect ? "text-emerald-900 font-semibold" : "text-slate-700 font-normal"}`}>
                                 {opt.text}
                               </span>
+                              {isCorrect && (
+                                <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-200/60 text-emerald-800">
+                                  Correcta
+                                </span>
+                              )}
                             </label>
                             <button
                               onClick={() => setDeleteOptionTarget(opt)}
-                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors ml-4"
+                              className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors ml-3"
+                              title="Eliminar opción"
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={15} />
                             </button>
                           </div>
                         );
                       })}
                     </div>
                     
-                    <div className="flex justify-between items-center">
-                      {!q.correct_option_id && q.options.length > 0 && (
-                        <p className="text-amber-600 text-xs flex items-center gap-1 font-medium">
-                          ⚠ Selecciona la respuesta correcta marcando el círculo.
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-1">
+                      {!q.correct_option_id && q.options.length > 0 ? (
+                        <p className="text-amber-700 bg-amber-50 border border-amber-200/60 px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 font-medium">
+                          <span>⚠</span> Marca el círculo de la opción que sea la respuesta correcta.
                         </p>
-                      )}
+                      ) : <div />}
                       
                       {q.options.length < 4 ? (
                         <button
@@ -351,12 +382,12 @@ export default function ExamBuilder() {
                             setOptionForm({ text: "" });
                             setOptionModalOpen(true);
                           }}
-                          className="text-indigo-600 hover:text-indigo-700 text-sm font-medium flex items-center gap-1 ml-auto"
+                          className="text-indigo-600 hover:text-indigo-700 text-sm font-semibold flex items-center gap-1.5 ml-auto hover:underline"
                         >
                           <Plus size={16} /> Añadir Opción ({q.options.length}/4)
                         </button>
                       ) : (
-                        <p className="text-gray-400 text-xs ml-auto">Límite de 4 opciones alcanzado.</p>
+                        <p className="text-slate-400 text-xs ml-auto font-medium">Límite de 4 opciones alcanzado.</p>
                       )}
                     </div>
                   </div>
@@ -371,42 +402,52 @@ export default function ExamBuilder() {
       <Modal isOpen={examModalOpen} onClose={() => setExamModalOpen(false)} title="Configuración del Examen" size="sm">
         <form onSubmit={handleSaveExam} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Título del Examen</label>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Título del Examen</label>
             <input
               type="text"
               value={examForm.title}
               onChange={(e) => setExamForm({ ...examForm, title: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 text-sm transition-all"
               required
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Aprobación (%)</label>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Aprobación (%)</label>
               <input
                 type="number"
                 min="1" max="100"
                 value={examForm.passing_score}
                 onChange={(e) => setExamForm({ ...examForm, passing_score: parseInt(e.target.value) })}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-indigo-500"
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 text-sm transition-all"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Intentos Máx.</label>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Intentos Máx.</label>
               <input
                 type="number"
                 min="1" max="999"
                 value={examForm.max_attempts}
                 onChange={(e) => setExamForm({ ...examForm, max_attempts: parseInt(e.target.value) })}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-indigo-500"
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 text-sm transition-all"
                 required
               />
             </div>
           </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setExamModalOpen(false)} className="flex-1 py-2.5 border rounded-lg hover:bg-gray-50 font-medium text-sm">Cancelar</button>
-            <button type="submit" disabled={isSavingExam} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm disabled:opacity-50">
+          <div className="flex gap-3 pt-3">
+            <button 
+              type="button" 
+              onClick={() => setExamModalOpen(false)} 
+              className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium text-sm transition-colors"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              disabled={isSavingExam} 
+              className="flex-1 py-2.5 bg-indigo-600 active:scale-[0.98] text-white rounded-xl hover:bg-indigo-700 font-medium text-sm disabled:opacity-50 transition-all shadow-sm shadow-indigo-200"
+            >
               {isSavingExam ? "Guardando..." : "Guardar"}
             </button>
           </div>
@@ -417,30 +458,40 @@ export default function ExamBuilder() {
       <Modal isOpen={questionModalOpen} onClose={() => setQuestionModalOpen(false)} title={editingQuestion ? "Editar Pregunta" : "Nueva Pregunta"} size="md">
         <form onSubmit={handleSaveQuestion} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Enunciado</label>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Enunciado de la Pregunta</label>
             <textarea
               value={questionForm.statement}
               onChange={(e) => setQuestionForm({ ...questionForm, statement: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:border-indigo-500 min-h-[100px] resize-y"
-              placeholder="Escribe la pregunta..."
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 text-sm min-h-[110px] resize-y transition-all"
+              placeholder="Ej: ¿Cuál es la complejidad temporal de una búsqueda binaria?"
               required
               autoFocus
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Puntos (Valor de la pregunta)</label>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Puntos (Ponderación)</label>
             <input
               type="number"
               min="1"
               value={questionForm.points}
               onChange={(e) => setQuestionForm({ ...questionForm, points: parseInt(e.target.value) || 1 })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 text-sm transition-all"
               required
             />
           </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setQuestionModalOpen(false)} className="flex-1 py-2.5 border rounded-lg hover:bg-gray-50 font-medium text-sm">Cancelar</button>
-            <button type="submit" disabled={isSavingQuestion} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm disabled:opacity-50">
+          <div className="flex gap-3 pt-3">
+            <button 
+              type="button" 
+              onClick={() => setQuestionModalOpen(false)} 
+              className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium text-sm transition-colors"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              disabled={isSavingQuestion} 
+              className="flex-1 py-2.5 bg-indigo-600 active:scale-[0.98] text-white rounded-xl hover:bg-indigo-700 font-medium text-sm disabled:opacity-50 transition-all shadow-sm shadow-indigo-200"
+            >
               {isSavingQuestion ? "Guardando..." : "Guardar Pregunta"}
             </button>
           </div>
@@ -448,23 +499,33 @@ export default function ExamBuilder() {
       </Modal>
 
       {/* MODAL OPCIÓN */}
-      <Modal isOpen={optionModalOpen} onClose={() => setOptionModalOpen(false)} title="Añadir Opción" size="sm">
+      <Modal isOpen={optionModalOpen} onClose={() => setOptionModalOpen(false)} title="Añadir Opción de Respuesta" size="sm">
         <form onSubmit={handleSaveOption} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Texto de la Opción</label>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Texto de la Opción</label>
             <input
               type="text"
               value={optionForm.text}
               onChange={(e) => setOptionForm({ text: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-indigo-500"
-              placeholder="Ej: Todas las anteriores"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 text-sm transition-all"
+              placeholder="Ej: O(log n)"
               required
               autoFocus
             />
           </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setOptionModalOpen(false)} className="flex-1 py-2.5 border rounded-lg hover:bg-gray-50 font-medium text-sm">Cancelar</button>
-            <button type="submit" disabled={isSavingOption} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm disabled:opacity-50">
+          <div className="flex gap-3 pt-3">
+            <button 
+              type="button" 
+              onClick={() => setOptionModalOpen(false)} 
+              className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium text-sm transition-colors"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              disabled={isSavingOption} 
+              className="flex-1 py-2.5 bg-indigo-600 active:scale-[0.98] text-white rounded-xl hover:bg-indigo-700 font-medium text-sm disabled:opacity-50 transition-all shadow-sm shadow-indigo-200"
+            >
               {isSavingOption ? "Guardando..." : "Añadir Opción"}
             </button>
           </div>
