@@ -119,42 +119,48 @@ export default function TeacherGroups() {
 
   // ── Columnas de la tabla ───────────────────────────────────────────────
   const columns = [
-    { key: "id", label: "ID" },
-    { key: "name", label: "Nombre del Grupo" },
+    {
+      key: "id",
+      label: "Código",
+      render: (val) => (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200/60">
+          #{val}
+        </span>
+      ),
+    },
+    {
+      key: "name",
+      label: "Nombre del Curso",
+      render: (val) => (
+        <span className="font-bold text-slate-800 text-sm">{val}</span>
+      ),
+    },
     {
       key: "actions",
       label: "Acciones",
       render: (_, row) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/teacher/groups/${row.id}`);
-            }}
-            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-            title="Ver matrículas"
+            onClick={() => navigate(`/teacher/groups/${row.id}`)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50/80 hover:bg-indigo-100/80 rounded-lg transition-colors border border-indigo-100"
+            title="Ver estudiantes matriculados"
           >
-            <Users size={16} />
+            <Users size={14} />
+            <span>Estudiantes</span>
           </button>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEdit(row);
-            }}
-            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={() => handleEdit(row)}
+            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
             title="Editar nombre"
           >
-            <Pencil size={16} />
+            <Pencil size={15} />
           </button>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteTarget(row);
-            }}
-            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-            title="Eliminar grupo"
+            onClick={() => setDeleteTarget(row)}
+            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+            title="Desactivar grupo"
           >
-            <Trash2 size={16} />
+            <Trash2 size={15} />
           </button>
         </div>
       ),
@@ -162,23 +168,28 @@ export default function TeacherGroups() {
   ];
 
   return (
-    <>
+    <div className="space-y-6 animate-fade-in">
       <ToastContainer />
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/70 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Mis Grupos</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Gestiona tus grupos académicos y sus estudiantes.
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Mis Grupos Académicos</h1>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
+              {groups.length} activo{groups.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <p className="text-slate-500 text-sm mt-1">
+            Administra tus cursos asignados, gestiona matrículas y organiza contenidos.
           </p>
         </div>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors shadow-sm text-sm"
+          className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-semibold py-2.5 px-4 rounded-xl transition-all shadow-md shadow-indigo-600/20 text-sm"
         >
           <Plus size={18} />
-          Nuevo Grupo
+          <span>Nuevo Grupo</span>
         </button>
       </div>
 
@@ -187,7 +198,7 @@ export default function TeacherGroups() {
         columns={columns}
         data={groups}
         isLoading={isLoading}
-        emptyMessage="Aún no tienes grupos creados. ¡Crea tu primer grupo académico!"
+        emptyMessage="Aún no tienes grupos creados. ¡Haz clic en 'Nuevo Grupo' para comenzar!"
         onRowClick={(row) => navigate(`/teacher/groups/${row.id}`)}
       />
 
@@ -195,19 +206,19 @@ export default function TeacherGroups() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingGroup ? "Editar Grupo" : "Nuevo Grupo"}
+        title={editingGroup ? "Editar Nombre del Grupo" : "Crear Nuevo Grupo Académico"}
         size="sm"
       >
         <form onSubmit={handleSave} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Nombre del grupo
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+              Nombre del curso o grupo
             </label>
             <input
               type="text"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all text-sm"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm"
               placeholder="Ej: Enlace Químico 11-B"
               required
               autoFocus
@@ -219,16 +230,16 @@ export default function TeacherGroups() {
               type="button"
               onClick={() => setModalOpen(false)}
               disabled={isSaving}
-              className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
+              className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-semibold text-sm"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSaving || !groupName.trim()}
-              className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white rounded-xl transition-all font-semibold text-sm shadow-md shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSaving ? "Guardando…" : editingGroup ? "Actualizar" : "Crear Grupo"}
+              {isSaving ? "Guardando…" : editingGroup ? "Guardar Cambios" : "Crear Grupo"}
             </button>
           </div>
         </form>
@@ -239,11 +250,11 @@ export default function TeacherGroups() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="¿Eliminar este grupo?"
-        message={`El grupo "${deleteTarget?.name}" será desactivado. Los estudiantes matriculados perderán acceso.`}
-        confirmText="Eliminar"
+        title="¿Desactivar este grupo?"
+        message={`El grupo "${deleteTarget?.name}" será marcado como inactivo. Podrás reactivarlo en cualquier momento.`}
+        confirmText="Desactivar"
         isLoading={isDeleting}
       />
-    </>
+    </div>
   );
 }
