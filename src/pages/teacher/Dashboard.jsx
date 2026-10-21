@@ -78,113 +78,190 @@ export default function TeacherDashboard() {
   }, [fetchStats]);
 
   return (
-    <>
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">
-            Bienvenido, {user?.full_name || user?.username || "Docente"}
-          </h1>
-          <p className="text-gray-500 mt-1 text-sm">
-            Gestiona tus cursos, contenidos y evaluaciones desde aquí.
-          </p>
-        </div>
-        <button
-          onClick={fetchStats}
-          disabled={isLoading}
-          className="p-2.5 rounded-lg border border-gray-200 text-gray-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
-          title="Actualizar datos"
-        >
-          <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
-        </button>
-      </header>
+    <div className="space-y-8 animate-fade-in">
+      {/* ── Hero Banner ─────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-950 via-slate-900 to-slate-950 text-white p-7 sm:p-9 shadow-xl border border-slate-800/80">
+        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute right-20 -top-10 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        <div 
-          onClick={() => navigate("/teacher/groups")}
-          className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer"
-        >
-          <div className="bg-indigo-50 p-3.5 rounded-lg text-indigo-600">
-            <Users size={22} />
+        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold tracking-wide border border-indigo-500/30">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              Portal Docente Activo
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+              Bienvenido, {user?.full_name || user?.username || "Docente"}
+            </h1>
+            <p className="text-slate-300 text-sm max-w-xl leading-relaxed">
+              Supervisa el rendimiento académico de tus grupos, diseña evaluaciones interactivas y administra objetos virtuales de aprendizaje (OVAs).
+            </p>
           </div>
-          <div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Mis Grupos</p>
-            <h3 className="text-2xl font-bold text-gray-800 mt-0.5">
-              {isLoading ? "..." : stats.groupsCount}
-            </h3>
-          </div>
-        </div>
 
-        <div 
-          onClick={() => navigate("/teacher/ovas")}
-          className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer"
-        >
-          <div className="bg-emerald-50 p-3.5 rounded-lg text-emerald-600">
-            <BookOpen size={22} />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">OVAs Creados</p>
-            <h3 className="text-2xl font-bold text-gray-800 mt-0.5">
-              {isLoading ? "..." : stats.ovasCount}
-            </h3>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="bg-amber-50 p-3.5 rounded-lg text-amber-600">
-            <ClipboardList size={22} />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Exámenes Activos</p>
-            <h3 className="text-2xl font-bold text-gray-800 mt-0.5">
-              {isLoading ? "..." : stats.examsCount}
-            </h3>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchStats}
+              disabled={isLoading}
+              className="p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-all shadow-sm active:scale-95"
+              title="Actualizar datos"
+            >
+              <RefreshCw size={18} className={isLoading ? "animate-spin text-indigo-400" : ""} />
+            </button>
+            <button
+              onClick={() => navigate("/teacher/groups")}
+              className="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/30 transition-all active:scale-95 flex items-center gap-2"
+            >
+              <Users size={16} />
+              <span>Ver Cursos</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Panel de Accesos Rápidos a Grupos */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex justify-between items-center mb-5">
-          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <LayoutDashboard size={20} className="text-indigo-600" />
-            Tus Cursos Asignados
-          </h2>
+      {/* ── Stats Cards ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        {/* Mis Grupos */}
+        <div 
+          onClick={() => navigate("/teacher/groups")}
+          className="group bg-white p-6 rounded-2xl shadow-sm border border-slate-200/70 hover:shadow-md hover:border-indigo-300/80 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shadow-inner group-hover:scale-105 transition-transform">
+              <Users size={22} />
+            </div>
+            <span className="text-xs font-semibold text-indigo-600 group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
+              Gestionar <ArrowRight size={13} />
+            </span>
+          </div>
+          <div className="mt-5">
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Mis Grupos</p>
+            <div className="flex items-baseline gap-2 mt-1">
+              <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                {isLoading ? "..." : stats.groupsCount}
+              </h3>
+              <span className="text-xs text-slate-400 font-medium">asignados</span>
+            </div>
+          </div>
+        </div>
+
+        {/* OVAs Creados */}
+        <div 
+          onClick={() => navigate("/teacher/ovas")}
+          className="group bg-white p-6 rounded-2xl shadow-sm border border-slate-200/70 hover:shadow-md hover:border-emerald-300/80 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shadow-inner group-hover:scale-105 transition-transform">
+              <BookOpen size={22} />
+            </div>
+            <span className="text-xs font-semibold text-emerald-600 group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
+              Explorar <ArrowRight size={13} />
+            </span>
+          </div>
+          <div className="mt-5">
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">OVAs Creados</p>
+            <div className="flex items-baseline gap-2 mt-1">
+              <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                {isLoading ? "..." : stats.ovasCount}
+              </h3>
+              <span className="text-xs text-slate-400 font-medium">módulos</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Exámenes Activos */}
+        <div 
+          onClick={() => navigate("/teacher/results")}
+          className="group bg-white p-6 rounded-2xl shadow-sm border border-slate-200/70 hover:shadow-md hover:border-amber-300/80 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shadow-inner group-hover:scale-105 transition-transform">
+              <ClipboardList size={22} />
+            </div>
+            <span className="text-xs font-semibold text-amber-600 group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
+              Resultados <ArrowRight size={13} />
+            </span>
+          </div>
+          <div className="mt-5">
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Exámenes Activos</p>
+            <div className="flex items-baseline gap-2 mt-1">
+              <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                {isLoading ? "..." : stats.examsCount}
+              </h3>
+              <span className="text-xs text-slate-400 font-medium">evaluaciones</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Panel de Accesos Rápidos a Grupos ────────────────────────────── */}
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/70 p-6 sm:p-7">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6 pb-4 border-b border-slate-100">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+              <LayoutDashboard size={20} className="text-indigo-600" />
+              Tus Grupos Académicos
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">Accede directamente a los módulos y matrículas de tus cursos</p>
+          </div>
           <button
             onClick={() => navigate("/teacher/groups")}
-            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors"
           >
-            Ver todos los grupos <ArrowRight size={14} />
+            Administrar grupos <ArrowRight size={14} />
           </button>
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-10">
+          <div className="flex justify-center py-12">
             <LoadingSpinner size="md" />
           </div>
         ) : stats.groups.length === 0 ? (
-          <div className="text-center py-8 text-gray-400">
-            <Users size={32} className="mx-auto mb-2 opacity-40" />
-            <p className="text-sm">No tienes grupos activos asignados actualmente.</p>
+          <div className="text-center py-12 text-slate-400">
+            <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3 text-slate-400">
+              <Users size={26} />
+            </div>
+            <p className="text-sm font-semibold text-slate-600">No tienes grupos activos asignados actualmente.</p>
+            <p className="text-xs text-slate-400 mt-1">Crea tu primer curso en la sección de grupos para comenzar.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {stats.groups.map((group) => (
               <div
                 key={group.id}
-                onClick={() => navigate("/teacher/ovas", { state: { groupId: group.id, groupName: group.name } })}
-                className="p-4 rounded-lg border border-gray-100 bg-gray-50/50 hover:bg-white hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer flex justify-between items-center"
+                className="p-5 rounded-2xl border border-slate-200/70 bg-slate-50/40 hover:bg-white hover:border-indigo-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
               >
                 <div>
-                  <h4 className="font-semibold text-gray-800 text-sm">{group.name}</h4>
-                  <p className="text-xs text-gray-400 mt-1">Clic para gestionar temas y OVAs</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">
+                      Curso #{group.id}
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" title="Activo" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 text-base mt-2.5 leading-snug">{group.name}</h4>
+                  <p className="text-xs text-slate-400 mt-1">Asignado a tu cuenta docente</p>
                 </div>
-                <ArrowRight size={16} className="text-gray-400" />
+
+                <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => navigate(`/teacher/groups/${group.id}`)}
+                    className="text-xs font-semibold text-slate-600 hover:text-indigo-600 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-1"
+                  >
+                    <Users size={13} />
+                    <span>Estudiantes</span>
+                  </button>
+                  <button
+                    onClick={() => navigate("/teacher/ovas", { state: { groupId: group.id, groupName: group.name } })}
+                    className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1 active:scale-95"
+                  >
+                    <span>Ver OVAs</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

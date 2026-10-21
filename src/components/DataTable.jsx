@@ -57,23 +57,23 @@ export default function DataTable({
   // Skeleton loading rows
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/70 overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
+            <tr className="bg-slate-50/80 border-b border-slate-100">
               {columns.map((col) => (
-                <th key={col.key} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th key={col.key} className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   {col.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100">
             {[...Array(4)].map((_, i) => (
-              <tr key={i} className="border-b border-gray-50">
+              <tr key={i} className="hover:bg-slate-50/30">
                 {columns.map((col) => (
                   <td key={col.key} className="px-5 py-4">
-                    <div className="h-4 bg-gray-100 rounded animate-pulse w-3/4" />
+                    <div className="h-4 bg-slate-100 rounded-md animate-pulse w-3/4" />
                   </td>
                 ))}
               </tr>
@@ -87,52 +87,52 @@ export default function DataTable({
   // Empty state
   if (data.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-50 mb-4">
-          <Inbox size={24} className="text-gray-400" />
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/70 p-12 text-center">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 mb-3.5 shadow-inner">
+          <Inbox size={26} />
         </div>
-        <p className="text-gray-400 text-sm">{emptyMessage}</p>
+        <p className="text-slate-500 font-medium text-sm">{emptyMessage}</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200/70 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-50/80 border-b border-gray-100">
+            <tr className="bg-slate-50/90 border-b border-slate-100">
               {columns.map((col) => (
                 <th
                   key={col.key}
                   onClick={() => handleSort(col.key)}
-                  className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 transition-colors select-none"
+                  className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-800 transition-colors select-none"
                 >
                   <div className="flex items-center gap-1.5">
                     {col.label}
                     {sortKey === col.key && (
                       sortDir === "asc"
-                        ? <ChevronUp size={14} />
-                        : <ChevronDown size={14} />
+                        ? <ChevronUp size={14} className="text-indigo-600" />
+                        : <ChevronDown size={14} className="text-indigo-600" />
                     )}
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-slate-100">
             {sortedData.map((row, idx) => (
               <tr
                 key={row.id ?? idx}
                 onClick={() => onRowClick?.(row)}
-                className={`transition-colors ${
+                className={`transition-colors duration-150 ${
                   onRowClick
-                    ? "cursor-pointer hover:bg-indigo-50/50"
-                    : "hover:bg-gray-50/50"
+                    ? "cursor-pointer hover:bg-indigo-50/40"
+                    : "hover:bg-slate-50/70"
                 }`}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className="px-5 py-3.5 text-sm text-gray-700">
+                  <td key={col.key} className="px-5 py-4 text-sm text-slate-700">
                     {col.render
                       ? col.render(row[col.key], row)
                       : (row[col.key] ?? "—")}
@@ -142,6 +142,9 @@ export default function DataTable({
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="px-5 py-3 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+        <span>Total: <strong className="text-slate-600 font-semibold">{sortedData.length}</strong> registro{sortedData.length !== 1 ? 's' : ''}</span>
       </div>
     </div>
   );
