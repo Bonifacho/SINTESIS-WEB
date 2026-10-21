@@ -134,41 +134,51 @@ export default function Topics() {
   };
 
   const columns = [
-    { key: "order_index", label: "Orden" },
-    { key: "title", label: "Título del Tema" },
+    {
+      key: "order_index",
+      label: "Orden",
+      render: (val, _, idx) => (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200/60 font-mono">
+          #{val ?? (idx + 1)}
+        </span>
+      ),
+    },
+    {
+      key: "title",
+      label: "Título de la Unidad",
+      render: (val) => (
+        <span className="font-bold text-slate-800 text-sm">{val}</span>
+      ),
+    },
     {
       key: "actions",
       label: "Acciones",
       render: (_, row) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/teacher/ovas/topic/${row.id}`, { state: { topicName: row.title }});
-            }}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors mr-2"
+            onClick={() => navigate(`/teacher/ovas/topic/${row.id}`, { state: { topicName: row.title }})}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50/80 hover:bg-indigo-100/80 rounded-lg transition-colors border border-indigo-100"
           >
-            Ver OVAs <ArrowRight size={14} />
+            <span>Ver OVAs</span>
+            <ArrowRight size={13} />
           </button>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={() => {
               setEditingTopic(row);
               setTopicTitle(row.title);
               setModalOpen(true);
             }}
-            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+            title="Editar tema"
           >
-            <Pencil size={16} />
+            <Pencil size={15} />
           </button>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteTarget(row);
-            }}
-            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            onClick={() => setDeleteTarget(row)}
+            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+            title="Eliminar tema"
           >
-            <Trash2 size={16} />
+            <Trash2 size={15} />
           </button>
         </div>
       ),
@@ -176,22 +186,31 @@ export default function Topics() {
   ];
 
   return (
-    <>
+    <div className="space-y-6 animate-fade-in">
       <ToastContainer />
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/70 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Gestión de Contenido</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Administra los temas (unidades) de tus grupos.
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Gestión de Contenido</h1>
+            {selectedGroupId && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
+                {topics.length} tema{topics.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          <p className="text-slate-500 text-sm mt-1">
+            Administra los temas (unidades pedagógicas) y los objetos virtuales de aprendizaje de cada curso.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           {/* Selector de Grupo */}
           <select
             value={selectedGroupId}
             onChange={(e) => setSelectedGroupId(e.target.value)}
-            className="px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500/30 outline-none shadow-sm min-w-[200px]"
+            className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none shadow-xs min-w-[220px]"
           >
             <option value="" disabled>Selecciona un grupo...</option>
             {groups.map((g) => (
@@ -206,26 +225,30 @@ export default function Topics() {
               setModalOpen(true);
             }}
             disabled={!selectedGroupId}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white font-medium py-2.5 px-4 rounded-lg transition-colors shadow-sm text-sm"
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-4 rounded-xl transition-all shadow-md shadow-indigo-600/20 text-sm"
           >
             <Plus size={18} />
-            Nuevo Tema
+            <span>Nuevo Tema</span>
           </button>
         </div>
       </div>
 
       {!selectedGroupId ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-          <FolderOpen size={40} className="mx-auto text-gray-300 mb-4" />
-          <h3 className="text-lg font-medium text-gray-700">Ningún grupo seleccionado</h3>
-          <p className="text-gray-500 text-sm mt-2">Por favor selecciona un grupo en el menú desplegable superior para ver sus temas.</p>
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200/70 p-14 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto mb-4 shadow-inner">
+            <FolderOpen size={30} />
+          </div>
+          <h3 className="text-base font-bold text-slate-800">Ningún grupo académico seleccionado</h3>
+          <p className="text-slate-500 text-sm mt-1 max-w-md mx-auto">
+            Por favor selecciona uno de tus cursos en el menú desplegable superior para ver y administrar sus temas.
+          </p>
         </div>
       ) : (
         <DataTable
           columns={columns}
           data={topics}
           isLoading={isLoading}
-          emptyMessage="No hay temas en este grupo. ¡Crea el primer tema!"
+          emptyMessage="No hay temas en este curso todavía. ¡Haz clic en 'Nuevo Tema' para crear la primera unidad!"
           onRowClick={(row) => navigate(`/teacher/ovas/topic/${row.id}`, { state: { topicName: row.title }})}
         />
       )}
@@ -234,26 +257,38 @@ export default function Topics() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingTopic ? "Editar Tema" : "Nuevo Tema"}
+        title={editingTopic ? "Editar Título del Tema" : "Crear Nueva Unidad Temática"}
         size="sm"
       >
         <form onSubmit={handleSave} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Título del Tema</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+              Título del tema o unidad
+            </label>
             <input
               type="text"
               value={topicTitle}
               onChange={(e) => setTopicTitle(e.target.value)}
-              placeholder="Ej: Unidad 1 - Cinemática"
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-indigo-500"
+              placeholder="Ej: Unidad 1 - Cinemática y Movimiento"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
               autoFocus
               required
             />
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-2.5 border rounded-lg hover:bg-gray-50 font-medium text-sm">Cancelar</button>
-            <button type="submit" disabled={isSaving} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm disabled:opacity-50">
-              {isSaving ? "Guardando..." : "Guardar"}
+            <button
+              type="button"
+              onClick={() => setModalOpen(false)}
+              className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-semibold text-sm transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white rounded-xl font-semibold text-sm shadow-md shadow-indigo-600/20 transition-all disabled:opacity-50"
+            >
+              {isSaving ? "Guardando…" : "Guardar Tema"}
             </button>
           </div>
         </form>
@@ -266,8 +301,9 @@ export default function Topics() {
         onConfirm={handleDelete}
         title="¿Eliminar Tema?"
         message={`Se eliminará el tema "${deleteTarget?.title}" y todos sus OVAs asociados. Esta acción no se puede deshacer.`}
+        confirmText="Eliminar"
         isLoading={isDeleting}
       />
-    </>
+    </div>
   );
 }
