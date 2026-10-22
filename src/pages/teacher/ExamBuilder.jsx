@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Plus, Settings, Trash2, CheckCircle2, Circle, Pencil } from "lucide-react";
+import {
+  GripVertical,
+  Trash2,
+  Check,
+  Plus,
+  X,
+  Eye,
+  ArrowLeft,
+} from "lucide-react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "../../api/client";
 import Modal from "../../components/Modal";
@@ -7,549 +15,597 @@ import ConfirmDialog from "../../components/ConfirmDialog";
 import { useToast } from "../../components/Toast";
 
 /**
- * ExamBuilder — Constructor dinámico de Exámenes
+ * ExamBuilder — Constructor dinámico de Exámenes (Boceto 4)
+ * Edición inline directa de preguntas, opciones y claves correctas.
  */
 export default function ExamBuilder() {
   const { ovaId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast, ToastContainer } = useToast();
-  
-  const ovaName = location.state?.ovaName || `OVA #${ovaId}`;
+
+  const ovaName = location.state?.ovaName || `OVA ${ovaId}`;
 
   const [exam, setExam] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Modal Examen
-  const [examModalOpen, setExamModalOpen] = useState(false);
-  const [examForm, setExamForm] = useState({ title: "Examen Final", passing_score: 60, max_attempts: 3 });
-  const [isSavingExam, setIsSavingExam] = useState(false);
+  // Configuración del examen
+  const [examConfig, setExamConfig] = useState({
+    title: `Evaluación: ${ovaName}`,
+    passing_score: 60,
+    max_attempts: 3,
+  });
 
-  // Modal Pregunta
-  const [questionModalOpen, setQuestionModalOpen] = useState(false);
-  const [editingQuestion, setEditingQuestion] = useState(null);
-  const [questionForm, setQuestionForm] = useState({ statement: "", points: 1 });
-  const [isSavingQuestion, setIsSavingQuestion] = useState(false);
+  // Preguntas con opciones y clave de respuesta correcta
+  const [questions, setQuestions] = useState([]);
 
-  // Modal Opción
-  const [optionModalOpen, setOptionModalOpen] = useState(false);
-  const [targetQuestionId, setTargetQuestionId] = useState(null);
-  const [optionForm, setOptionForm] = useState({ text: "" });
-  const [isSavingOption, setIsSavingOption] = useState(false);
+  // Modal de Vista Previa
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewAnswers, setPreviewAnswers] = useState({});
 
-  // ConfirmDialogs
-  const [deleteQuestionTarget, setDeleteQuestionTarget] = useState(null);
-  const [deleteOptionTarget, setDeleteOptionTarget] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // ConfirmDialog para eliminar pregunta
+  const [deleteQTarget, setDeleteQTarget] = useState(null);
 
+  // Cargar examen existente
   const fetchExam = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data } = await api.get(`/api/v1/academic/exams/by-ova/${ovaId}/teacher`);
-      // Sort questions and options by order_index
-      const sortedExam = { ...data.data };
-      if (sortedExam.questions) {
-        sortedExam.questions.sort((a, b) => a.order_index - b.order_index);
-        sortedExam.questions.forEach(q => {
-          q.options.sort((a, b) => a.order_index - b.order_index);
+      const examData = data.data;
+      setExam(examData);
+      setExamConfig({
+        title: examData.title || `Evaluación: ${ovaName}`,
+        passing_score: examData.passing_score ?? 60,
+        max_attempts: examData.max_attempts ?? 3,
+      });
+
+      if (examData.questions) {
+        const sortedQuestions = [...examData.questions].sort(
+          (a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)
+        );
+        sortedQuestions.forEach((q) => {
+          if (q.options) {
+            q.options.sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+          } else {
+            q.options = [];
+          }
         });
+        setQuestions(sortedQuestions);
       }
-      setExam(sortedExam);
     } catch (err) {
       if (err.response?.status === 404) {
-        setExam(null); // No hay examen aún
+        // No hay examen aún: listo para crear uno
+        setExam(null);
+        setQuestions([]);
       } else {
         showToast("Error al cargar el examen", "error");
       }
     } finally {
       setIsLoading(false);
     }
-  }, [ovaId, showToast]);
+  }, [ovaId, ovaName, showToast]);
 
   useEffect(() => {
     fetchExam();
   }, [fetchExam]);
 
-  // ── EXAMEN ─────────────────────────────────────────────────────────────────
-  const handleSaveExam = async (e) => {
-    e.preventDefault();
-    setIsSavingExam(true);
+  // Asegurar que existe el examen en backend antes de añadir preguntas
+  const ensureExamExists = async () => {
+    if (exam) return exam;
+    const res = await api.post("/api/v1/academic/exams", {
+      ...examConfig,
+      ova_id: parseInt(ovaId),
+    });
+    const createdExam = res.data.data;
+    setExam(createdExam);
+    return createdExam;
+  };
+
+  // ── GUARDAR EXAMEN (Botón Header) ──────────────────────────────────────────
+  const handleSaveAll = async () => {
+    setIsSaving(true);
     try {
-      if (exam) {
-        await api.put(`/api/v1/academic/exams/${exam.id}`, examForm);
-        showToast("Configuración del examen actualizada", "success");
-      } else {
-        await api.post("/api/v1/academic/exams", {
-          ...examForm,
-          ova_id: parseInt(ovaId),
-        });
-        showToast("Examen creado", "success");
-      }
-      setExamModalOpen(false);
+      const currentExam = await ensureExamExists();
+      await api.put(`/api/v1/academic/exams/${currentExam.id}`, examConfig);
+      showToast("Examen guardado exitosamente", "success");
       fetchExam();
     } catch (err) {
       showToast(err.response?.data?.error || "Error al guardar el examen", "error");
     } finally {
-      setIsSavingExam(false);
+      setIsSaving(false);
     }
-  };
-
-  const openExamModal = () => {
-    if (exam) {
-      setExamForm({ title: exam.title, passing_score: exam.passing_score, max_attempts: exam.max_attempts });
-    } else {
-      setExamForm({ title: "Examen de " + ovaName, passing_score: 60, max_attempts: 3 });
-    }
-    setExamModalOpen(true);
   };
 
   // ── PREGUNTAS ──────────────────────────────────────────────────────────────
-  const handleSaveQuestion = async (e) => {
-    e.preventDefault();
-    if (!questionForm.statement.trim()) return;
-    setIsSavingQuestion(true);
+  const handleAddQuestion = async () => {
     try {
-      if (editingQuestion) {
-        await api.put(`/api/v1/academic/questions/${editingQuestion.id}`, questionForm);
-        showToast("Pregunta actualizada", "success");
-      } else {
-        await api.post("/api/v1/academic/questions", {
-          ...questionForm,
-          exam_id: exam.id,
-          order_index: exam.questions.length,
-        });
-        showToast("Pregunta añadida", "success");
-      }
-      setQuestionModalOpen(false);
-      fetchExam();
+      const currentExam = await ensureExamExists();
+      const nextIndex = questions.length;
+      const res = await api.post("/api/v1/academic/questions", {
+        exam_id: currentExam.id,
+        statement: "",
+        points: 1,
+        order_index: nextIndex,
+      });
+      const newQ = { ...res.data.data, options: [] };
+      setQuestions((prev) => [...prev, newQ]);
+      showToast("Pregunta agregada", "success");
     } catch (err) {
-      showToast(err.response?.data?.error || "Error al guardar la pregunta", "error");
-    } finally {
-      setIsSavingQuestion(false);
+      showToast("Error al agregar la pregunta", "error");
+    }
+  };
+
+  const handleStatementChange = (qId, value) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === qId ? { ...q, statement: value } : q))
+    );
+  };
+
+  const handlePersistQuestionStatement = async (qId, statement) => {
+    const q = questions.find((item) => item.id === qId);
+    if (!q) return;
+    try {
+      await api.put(`/api/v1/academic/questions/${qId}`, {
+        statement,
+        points: q.points || 1,
+      });
+    } catch {
+      showToast("No se pudo guardar el cambio del enunciado", "error");
+    }
+  };
+
+  const handleUpdateQuestionPoints = async (qId, points) => {
+    const validPoints = Math.max(1, points || 1);
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === qId ? { ...q, points: validPoints } : q))
+    );
+    const q = questions.find((item) => item.id === qId);
+    try {
+      await api.put(`/api/v1/academic/questions/${qId}`, {
+        statement: q?.statement || "",
+        points: validPoints,
+      });
+    } catch {
+      showToast("Error al actualizar puntos", "error");
     }
   };
 
   const handleDeleteQuestion = async () => {
-    if (!deleteQuestionTarget) return;
-    setIsDeleting(true);
+    if (!deleteQTarget) return;
     try {
-      await api.delete(`/api/v1/academic/questions/${deleteQuestionTarget.id}`);
+      await api.delete(`/api/v1/academic/questions/${deleteQTarget.id}`);
+      setQuestions((prev) => prev.filter((q) => q.id !== deleteQTarget.id));
+      setDeleteQTarget(null);
       showToast("Pregunta eliminada", "success");
-      setDeleteQuestionTarget(null);
-      fetchExam();
-    } catch (err) {
+    } catch {
       showToast("Error al eliminar la pregunta", "error");
-    } finally {
-      setIsDeleting(false);
     }
   };
 
   // ── OPCIONES ───────────────────────────────────────────────────────────────
-  const handleSaveOption = async (e) => {
-    e.preventDefault();
-    if (!optionForm.text.trim()) return;
-    setIsSavingOption(true);
+  const handleAddOption = async (qId) => {
+    const q = questions.find((item) => item.id === qId);
+    if (!q) return;
     try {
-      await api.post("/api/v1/academic/options", {
-        text: optionForm.text,
-        question_id: targetQuestionId,
-        order_index: exam.questions.find(q => q.id === targetQuestionId).options.length,
+      const nextIndex = q.options.length;
+      const res = await api.post("/api/v1/academic/options", {
+        question_id: qId,
+        text: "",
+        order_index: nextIndex,
       });
-      showToast("Opción añadida", "success");
-      setOptionModalOpen(false);
-      fetchExam();
-    } catch (err) {
-      showToast(err.response?.data?.error || "Error al añadir la opción", "error");
-    } finally {
-      setIsSavingOption(false);
+      const newOpt = res.data.data;
+      setQuestions((prev) =>
+        prev.map((item) =>
+          item.id === qId
+            ? { ...item, options: [...item.options, newOpt] }
+            : item
+        )
+      );
+    } catch {
+      showToast("Error al agregar la opción", "error");
     }
   };
 
-  const handleDeleteOption = async () => {
-    if (!deleteOptionTarget) return;
-    setIsDeleting(true);
+  const handleOptionTextChange = (qId, optId, value) => {
+    setQuestions((prev) =>
+      prev.map((q) =>
+        q.id === qId
+          ? {
+              ...q,
+              options: q.options.map((opt) =>
+                opt.id === optId ? { ...opt, text: value } : opt
+              ),
+            }
+          : q
+      )
+    );
+  };
+
+  const handlePersistOptionText = async (optId, text) => {
     try {
-      await api.delete(`/api/v1/academic/options/${deleteOptionTarget.id}`);
-      showToast("Opción eliminada", "success");
-      setDeleteOptionTarget(null);
-      fetchExam();
-    } catch (err) {
-      showToast("Error al eliminar la opción", "error");
-    } finally {
-      setIsDeleting(false);
+      await api.put(`/api/v1/academic/options/${optId}`, { text });
+    } catch {
+      showToast("Error al guardar texto de opción", "error");
     }
   };
 
-  const handleSetCorrectOption = async (questionId, optionId) => {
+  const handleDeleteOption = async (qId, optId) => {
+    try {
+      await api.delete(`/api/v1/academic/options/${optId}`);
+      setQuestions((prev) =>
+        prev.map((q) =>
+          q.id === qId
+            ? {
+                ...q,
+                options: q.options.filter((opt) => opt.id !== optId),
+                correct_option_id:
+                  q.correct_option_id === optId ? null : q.correct_option_id,
+              }
+            : q
+        )
+      );
+    } catch {
+      showToast("Error al eliminar la opción", "error");
+    }
+  };
+
+  const handleSetCorrectOption = async (qId, optId) => {
     try {
       await api.post("/api/v1/academic/answer-key", {
-        question_id: questionId,
-        correct_option_id: optionId
+        question_id: qId,
+        correct_option_id: optId,
       });
-      
-      // Update local state optmisticly
-      const updatedExam = { ...exam };
-      const q = updatedExam.questions.find(q => q.id === questionId);
-      if (q) q.correct_option_id = optionId;
-      setExam(updatedExam);
-      
-      showToast("Respuesta correcta guardada", "success");
+      setQuestions((prev) =>
+        prev.map((q) => (q.id === qId ? { ...q, correct_option_id: optId } : q))
+      );
+      showToast("Respuesta correcta actualizada", "success");
     } catch (err) {
-      showToast(err.response?.data?.error || "Error al fijar respuesta", "error");
-      fetchExam(); // revert local state on error
+      showToast("Error al fijar respuesta correcta", "error");
     }
   };
+
+  const breadcrumbText = `${ovaName.toUpperCase()} - OVA ${ovaId}`;
+  const cleanTitle = (examConfig.title || ovaName).replace(/^Evaluaci[oó]n:\s*/i, "");
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-24">
+        <div className="animate-spin rounded-full h-9 w-9 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <>
       <ToastContainer />
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3.5">
-          <button 
-            onClick={() => navigate(-1)} 
-            className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200/60"
-            title="Volver"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Constructor de Examen</h1>
-            <p className="text-slate-500 text-sm mt-0.5">Asociado al OVA: <span className="font-semibold text-slate-700">{ovaName}</span></p>
-          </div>
-        </div>
-        {exam && (
-          <button 
-            onClick={openExamModal} 
-            className="flex items-center gap-2 bg-white border border-slate-200/80 hover:bg-slate-50 active:scale-[0.98] text-slate-700 font-medium py-2.5 px-4 rounded-xl transition-all shadow-xs text-sm"
-          >
-            <Settings size={18} className="text-slate-500" />
-            Configuración del Examen
-          </button>
-        )}
+
+      {/* ── Breadcrumb Superior (Boceto 4) ──────────────────────────────── */}
+      <div className="mb-1 flex items-center gap-2">
+        <button
+          onClick={() => navigate(-1)}
+          className="text-slate-400 hover:text-indigo-600 transition-colors p-1 -ml-1 rounded"
+          title="Volver"
+        >
+          <ArrowLeft size={16} />
+        </button>
+        <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-600">
+          {breadcrumbText}
+        </span>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-        </div>
-      ) : !exam ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-12 text-center mt-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100/60 mb-4">
-            <CheckCircle2 size={32} className="text-indigo-600" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">Este OVA aún no tiene examen</h3>
-          <p className="text-slate-500 text-sm max-w-md mx-auto mb-6 leading-relaxed">
-            Crea una evaluación interactiva con preguntas de opción múltiple para medir el aprendizaje de tus estudiantes en este tema.
-          </p>
-          <button 
-            onClick={openExamModal} 
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-medium py-3 px-6 rounded-xl transition-all shadow-sm shadow-indigo-200 text-sm"
+      {/* ── Encabezado Principal y Acciones (Boceto 4) ──────────────────── */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          Evaluación: {cleanTitle}
+        </h1>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setPreviewOpen(true)}
+            className="flex items-center gap-2 bg-white hover:bg-slate-50 active:scale-95 text-slate-700 font-semibold py-2 px-4 rounded-xl border border-slate-200/90 shadow-xs text-sm transition-all"
           >
-            <Plus size={18} />
-            Crear Evaluación Ahora
+            <Eye size={16} className="text-slate-500" />
+            Vista previa
+          </button>
+          <button
+            onClick={handleSaveAll}
+            disabled={isSaving}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold py-2 px-5 rounded-xl shadow-xs text-sm transition-all"
+          >
+            {isSaving ? "Guardando..." : "Guardar examen"}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Tarjeta de Configuración de Evaluación (Boceto 4) ───────────── */}
+      <div className="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-5 mb-8">
+        <div className="flex flex-wrap items-center gap-6">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+              Puntaje mínimo para aprobar
+            </label>
+            <div className="relative w-28">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={examConfig.passing_score}
+                onChange={(e) =>
+                  setExamConfig((c) => ({
+                    ...c,
+                    passing_score: Number(e.target.value),
+                  }))
+                }
+                className="w-full pl-3.5 pr-7 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
+                %
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+              Intentos máximos
+            </label>
+            <div className="w-28">
+              <input
+                type="number"
+                min="1"
+                max="20"
+                value={examConfig.max_attempts}
+                onChange={(e) =>
+                  setExamConfig((c) => ({
+                    ...c,
+                    max_attempts: Number(e.target.value),
+                  }))
+                }
+                className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Encabezado de la Sección de Preguntas (Boceto 4) ─────────────── */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-base font-bold text-slate-800">
+          Preguntas ({questions.length})
+        </h2>
+        <button
+          onClick={handleAddQuestion}
+          className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100/70 py-1.5 px-3 rounded-lg transition-all"
+        >
+          <Plus size={15} />
+          Agregar pregunta
+        </button>
+      </div>
+
+      {/* ── Lista de Preguntas Inline (Boceto 4) ─────────────────────────── */}
+      {questions.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+          <p className="text-slate-600 font-semibold mb-1">
+            No hay preguntas en esta evaluación
+          </p>
+          <p className="text-xs text-slate-400 mb-4">
+            Comienza haciendo clic en el botón "+ Agregar pregunta".
+          </p>
+          <button
+            onClick={handleAddQuestion}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 py-2 px-4 rounded-xl shadow-xs"
+          >
+            <Plus size={16} />
+            Agregar primera pregunta
           </button>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Cabecera del Examen */}
-          <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 rounded-2xl shadow-lg shadow-indigo-600/15 p-6 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight mb-2">{exam.title}</h2>
-              <div className="flex flex-wrap gap-2 text-sm">
-                <span className="bg-white/15 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-xl text-xs font-semibold text-white">
-                  Aprobación mínima: {exam.passing_score}%
-                </span>
-                <span className="bg-white/15 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-xl text-xs font-semibold text-white">
-                  Intentos permitidos: {exam.max_attempts}
-                </span>
-                <span className="bg-white/15 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-xl text-xs font-semibold text-white">
-                  Preguntas: {exam.questions?.length || 0}
+        questions.map((q, qIndex) => (
+          <div
+            key={q.id}
+            className="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-5 mb-5 transition-all"
+          >
+            {/* Barra superior de la pregunta */}
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex items-center gap-2">
+                <GripVertical size={16} className="text-slate-400" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  PREGUNTA {qIndex + 1}
                 </span>
               </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 text-xs text-slate-500">
+                  <input
+                    type="number"
+                    min="1"
+                    value={q.points || 1}
+                    onChange={(e) =>
+                      handleUpdateQuestionPoints(q.id, Number(e.target.value))
+                    }
+                    className="w-10 px-1 py-0.5 text-center bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-700"
+                  />
+                  <span className="font-semibold text-slate-500">pt</span>
+                </div>
+                <button
+                  onClick={() => setDeleteQTarget(q)}
+                  className="text-slate-400 hover:text-rose-600 transition-colors p-1"
+                  title="Eliminar pregunta"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
+
+            {/* Enunciado de la pregunta */}
+            <div className="mb-4">
+              <input
+                type="text"
+                value={q.statement}
+                onChange={(e) => handleStatementChange(q.id, e.target.value)}
+                onBlur={(e) => handlePersistQuestionStatement(q.id, e.target.value)}
+                placeholder="¿Escribe el enunciado de la pregunta...?"
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+              />
+            </div>
+
+            {/* Opciones de respuesta */}
+            <div className="space-y-2.5 mb-3">
+              {q.options?.map((opt) => {
+                const isCorrect = q.correct_option_id === opt.id;
+                return (
+                  <div key={opt.id} className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => handleSetCorrectOption(q.id, opt.id)}
+                      className="flex-shrink-0"
+                      title={
+                        isCorrect
+                          ? "Respuesta correcta"
+                          : "Marcar como respuesta correcta"
+                      }
+                    >
+                      {isCorrect ? (
+                        <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-xs">
+                          <Check size={13} strokeWidth={3} />
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-slate-300 hover:border-slate-400 bg-white" />
+                      )}
+                    </button>
+                    <input
+                      type="text"
+                      value={opt.text}
+                      onChange={(e) =>
+                        handleOptionTextChange(q.id, opt.id, e.target.value)
+                      }
+                      onBlur={(e) => handlePersistOptionText(opt.id, e.target.value)}
+                      placeholder="Texto de la opción..."
+                      className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOption(q.id, opt.id)}
+                      className="p-1.5 text-slate-300 hover:text-slate-500 transition-colors"
+                      title="Eliminar opción"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Botón: + Agregar opción */}
             <button
-              onClick={() => {
-                setEditingQuestion(null);
-                setQuestionForm({ statement: "", points: 1 });
-                setQuestionModalOpen(true);
-              }}
-              className="flex items-center gap-2 bg-white text-indigo-700 hover:bg-indigo-50 active:scale-[0.98] font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm text-sm shrink-0"
+              type="button"
+              onClick={() => handleAddOption(q.id)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 pt-1 transition-colors"
             >
-              <Plus size={18} />
-              Añadir Pregunta
+              <Plus size={14} />
+              Agregar opción
             </button>
           </div>
-
-          {/* Lista de Preguntas */}
-          {exam.questions?.length === 0 ? (
-            <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center">
-              <p className="text-slate-500 font-medium">Aún no has agregado preguntas a este examen.</p>
-              <p className="text-slate-400 text-xs mt-1">Haz clic en "Añadir Pregunta" arriba para comenzar a estructurar la evaluación.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {exam.questions.map((q, index) => (
-                <div key={q.id} className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden hover:shadow-md transition-all duration-200">
-                  {/* Cabecera de la Pregunta */}
-                  <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex justify-between items-start gap-4">
-                    <div className="flex items-start gap-3.5">
-                      <span className="flex-shrink-0 w-8 h-8 rounded-xl bg-indigo-100/80 text-indigo-700 flex items-center justify-center font-bold text-sm">
-                        {index + 1}
-                      </span>
-                      <div>
-                        <h3 className="font-bold text-slate-800 text-base leading-snug">{q.statement}</h3>
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100/60 mt-1">
-                          {q.points} {q.points === 1 ? 'punto' : 'puntos'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => {
-                          setEditingQuestion(q);
-                          setQuestionForm({ statement: q.statement, points: q.points });
-                          setQuestionModalOpen(true);
-                        }}
-                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
-                        title="Editar Pregunta"
-                      >
-                        <Pencil size={17} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteQuestionTarget(q)}
-                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
-                        title="Eliminar Pregunta"
-                      >
-                        <Trash2 size={17} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Opciones */}
-                  <div className="p-6">
-                    <div className="space-y-2.5 mb-4">
-                      {q.options.map((opt) => {
-                        const isCorrect = q.correct_option_id === opt.id;
-                        return (
-                          <div 
-                            key={opt.id}
-                            className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
-                              isCorrect 
-                                ? "border-emerald-500 bg-emerald-50/70 shadow-xs ring-1 ring-emerald-500/20" 
-                                : "border-slate-200/80 bg-white hover:border-slate-300"
-                            }`}
-                          >
-                            <label className="flex items-center gap-3 cursor-pointer flex-1 select-none">
-                              <input
-                                type="radio"
-                                name={`correct_option_${q.id}`}
-                                checked={isCorrect}
-                                onChange={() => handleSetCorrectOption(q.id, opt.id)}
-                                className="w-4 h-4 text-emerald-600 border-slate-300 focus:ring-emerald-500"
-                              />
-                              <span className={`text-sm ${isCorrect ? "text-emerald-900 font-semibold" : "text-slate-700 font-normal"}`}>
-                                {opt.text}
-                              </span>
-                              {isCorrect && (
-                                <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-200/60 text-emerald-800">
-                                  Correcta
-                                </span>
-                              )}
-                            </label>
-                            <button
-                              onClick={() => setDeleteOptionTarget(opt)}
-                              className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors ml-3"
-                              title="Eliminar opción"
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-1">
-                      {!q.correct_option_id && q.options.length > 0 ? (
-                        <p className="text-amber-700 bg-amber-50 border border-amber-200/60 px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 font-medium">
-                          <span>⚠</span> Marca el círculo de la opción que sea la respuesta correcta.
-                        </p>
-                      ) : <div />}
-                      
-                      {q.options.length < 4 ? (
-                        <button
-                          onClick={() => {
-                            setTargetQuestionId(q.id);
-                            setOptionForm({ text: "" });
-                            setOptionModalOpen(true);
-                          }}
-                          className="text-indigo-600 hover:text-indigo-700 text-sm font-semibold flex items-center gap-1.5 ml-auto hover:underline"
-                        >
-                          <Plus size={16} /> Añadir Opción ({q.options.length}/4)
-                        </button>
-                      ) : (
-                        <p className="text-slate-400 text-xs ml-auto font-medium">Límite de 4 opciones alcanzado.</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        ))
       )}
 
-      {/* MODAL CONFIGURACIÓN EXAMEN */}
-      <Modal isOpen={examModalOpen} onClose={() => setExamModalOpen(false)} title="Configuración del Examen" size="sm">
-        <form onSubmit={handleSaveExam} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Título del Examen</label>
-            <input
-              type="text"
-              value={examForm.title}
-              onChange={(e) => setExamForm({ ...examForm, title: e.target.value })}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 text-sm transition-all"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Aprobación (%)</label>
-              <input
-                type="number"
-                min="1" max="100"
-                value={examForm.passing_score}
-                onChange={(e) => setExamForm({ ...examForm, passing_score: parseInt(e.target.value) })}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 text-sm transition-all"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Intentos Máx.</label>
-              <input
-                type="number"
-                min="1" max="999"
-                value={examForm.max_attempts}
-                onChange={(e) => setExamForm({ ...examForm, max_attempts: parseInt(e.target.value) })}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 text-sm transition-all"
-                required
-              />
-            </div>
-          </div>
-          <div className="flex gap-3 pt-3">
-            <button 
-              type="button" 
-              onClick={() => setExamModalOpen(false)} 
-              className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium text-sm transition-colors"
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              disabled={isSavingExam} 
-              className="flex-1 py-2.5 bg-indigo-600 active:scale-[0.98] text-white rounded-xl hover:bg-indigo-700 font-medium text-sm disabled:opacity-50 transition-all shadow-sm shadow-indigo-200"
-            >
-              {isSavingExam ? "Guardando..." : "Guardar"}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* MODAL PREGUNTA */}
-      <Modal isOpen={questionModalOpen} onClose={() => setQuestionModalOpen(false)} title={editingQuestion ? "Editar Pregunta" : "Nueva Pregunta"} size="md">
-        <form onSubmit={handleSaveQuestion} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Enunciado de la Pregunta</label>
-            <textarea
-              value={questionForm.statement}
-              onChange={(e) => setQuestionForm({ ...questionForm, statement: e.target.value })}
-              className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 text-sm min-h-[110px] resize-y transition-all"
-              placeholder="Ej: ¿Cuál es la complejidad temporal de una búsqueda binaria?"
-              required
-              autoFocus
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Puntos (Ponderación)</label>
-            <input
-              type="number"
-              min="1"
-              value={questionForm.points}
-              onChange={(e) => setQuestionForm({ ...questionForm, points: parseInt(e.target.value) || 1 })}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 text-sm transition-all"
-              required
-            />
-          </div>
-          <div className="flex gap-3 pt-3">
-            <button 
-              type="button" 
-              onClick={() => setQuestionModalOpen(false)} 
-              className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium text-sm transition-colors"
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              disabled={isSavingQuestion} 
-              className="flex-1 py-2.5 bg-indigo-600 active:scale-[0.98] text-white rounded-xl hover:bg-indigo-700 font-medium text-sm disabled:opacity-50 transition-all shadow-sm shadow-indigo-200"
-            >
-              {isSavingQuestion ? "Guardando..." : "Guardar Pregunta"}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* MODAL OPCIÓN */}
-      <Modal isOpen={optionModalOpen} onClose={() => setOptionModalOpen(false)} title="Añadir Opción de Respuesta" size="sm">
-        <form onSubmit={handleSaveOption} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Texto de la Opción</label>
-            <input
-              type="text"
-              value={optionForm.text}
-              onChange={(e) => setOptionForm({ text: e.target.value })}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 text-sm transition-all"
-              placeholder="Ej: O(log n)"
-              required
-              autoFocus
-            />
-          </div>
-          <div className="flex gap-3 pt-3">
-            <button 
-              type="button" 
-              onClick={() => setOptionModalOpen(false)} 
-              className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium text-sm transition-colors"
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              disabled={isSavingOption} 
-              className="flex-1 py-2.5 bg-indigo-600 active:scale-[0.98] text-white rounded-xl hover:bg-indigo-700 font-medium text-sm disabled:opacity-50 transition-all shadow-sm shadow-indigo-200"
-            >
-              {isSavingOption ? "Guardando..." : "Añadir Opción"}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* CONFIRMS */}
+      {/* ── Modal de Confirmación para Eliminar Pregunta ─────────────────── */}
       <ConfirmDialog
-        isOpen={!!deleteQuestionTarget}
-        onClose={() => setDeleteQuestionTarget(null)}
+        isOpen={Boolean(deleteQTarget)}
+        onClose={() => setDeleteQTarget(null)}
         onConfirm={handleDeleteQuestion}
-        title="¿Eliminar Pregunta?"
-        message="Se eliminará la pregunta y todas sus opciones. Esta acción no se puede deshacer."
-        isLoading={isDeleting}
+        title="Eliminar Pregunta"
+        message="¿Estás seguro de que deseas eliminar esta pregunta y sus opciones asociadas? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        type="danger"
       />
 
-      <ConfirmDialog
-        isOpen={!!deleteOptionTarget}
-        onClose={() => setDeleteOptionTarget(null)}
-        onConfirm={handleDeleteOption}
-        title="¿Eliminar Opción?"
-        message="¿Estás seguro de eliminar esta opción de respuesta?"
-        isLoading={isDeleting}
-      />
+      {/* ── Modal: Vista Previa del Examen (Simulación Estudiante) ──────── */}
+      <Modal
+        isOpen={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        title={`Vista previa: ${cleanTitle}`}
+        size="lg"
+      >
+        <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-1">
+          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex flex-wrap gap-4 text-xs font-medium text-slate-600">
+            <span>
+              <strong>Puntaje mínimo:</strong> {examConfig.passing_score}%
+            </span>
+            <span>
+              <strong>Intentos permitidos:</strong> {examConfig.max_attempts}
+            </span>
+            <span>
+              <strong>Total preguntas:</strong> {questions.length}
+            </span>
+          </div>
+
+          {questions.length === 0 ? (
+            <p className="text-center text-slate-400 py-6 text-sm">
+              No hay preguntas configuradas para previsualizar.
+            </p>
+          ) : (
+            questions.map((q, idx) => (
+              <div
+                key={q.id}
+                className="border border-slate-200/80 rounded-xl p-5 bg-white shadow-xs"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-sm font-bold text-slate-800">
+                    {idx + 1}. {q.statement || "Sin enunciado"}
+                  </h3>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                    {q.points || 1} pt
+                  </span>
+                </div>
+
+                <div className="space-y-2 mt-3">
+                  {q.options?.map((opt) => {
+                    const isSelected = previewAnswers[q.id] === opt.id;
+                    return (
+                      <label
+                        key={opt.id}
+                        onClick={() =>
+                          setPreviewAnswers((prev) => ({
+                            ...prev,
+                            [q.id]: opt.id,
+                          }))
+                        }
+                        className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-sm transition-all ${
+                          isSelected
+                            ? "border-indigo-500 bg-indigo-50/50 text-indigo-900 font-medium"
+                            : "border-slate-200 hover:border-slate-300 text-slate-700"
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                            isSelected
+                              ? "border-indigo-600 bg-indigo-600"
+                              : "border-slate-300"
+                          }`}
+                        >
+                          {isSelected && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          )}
+                        </div>
+                        <span>{opt.text || "Opción sin texto"}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+
+          <div className="pt-2 flex justify-end">
+            <button
+              onClick={() => setPreviewOpen(false)}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-5 rounded-xl text-sm transition-all"
+            >
+              Cerrar vista previa
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
