@@ -35,38 +35,49 @@ export default function Topics() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ── Sincronizar selección si cambia la navegación externa ──────────────────
+  // ── Cargar grupos del docente e inicializar grupo seleccionado ─────────
   useEffect(() => {
-    if (location.state?.groupId) {
-      setSelectedGroupId(String(location.state.groupId));
-    }
-  }, [location.state?.groupId]);
+    let isMounted = true;
+    const loadTeacherGroups = async () => {
+      try {
+        const { data } = await api.get("/api/v1/academic/groups");
+        if (!isMounted) return;
+        const groupsArray = Array.isArray(data) ? data : (data.data || []);
+        const myGroups = groupsArray.filter(
+          (g) => String(g.teacher_id) === String(user?.user_id || user?.id) && g.is_active
+        );
+        setGroups(myGroups);
 
-  // ── Cargar grupos del docente ──────────────────────────────────────────
-  const fetchGroups = useCallback(async () => {
-    try {
-      const { data } = await api.get("/api/v1/academic/groups");
-      const groupsArray = Array.isArray(data) ? data : (data.data || []);
-      const myGroups = groupsArray.filter(
-        (g) => String(g.teacher_id) === String(user.user_id) && g.is_active
-      );
-      setGroups(myGroups);
-      if (myGroups.length > 0) {
-        const navGroupId = location.state?.groupId ? String(location.state.groupId) : null;
-        if (navGroupId && myGroups.some((g) => String(g.id) === navGroupId)) {
-          setSelectedGroupId(navGroupId);
-        } else if (!selectedGroupId) {
-          setSelectedGroupId(myGroups[0].id.toString());
+        if (myGroups.length > 0) {
+          const navGroupId = location.state?.groupId ? String(location.state.groupId) : null;
+          if (navGroupId && myGroups.some((g) => String(g.id) === navGroupId)) {
+            setSelectedGroupId(navGroupId);
+            // Limpiar state de navegación para permitir cambios fluidos en el dropdown
+            navigate(location.pathname, { replace: true, state: {} });
+          } else {
+            setSelectedGroupId((prev) => {
+              if (prev && myGroups.some((g) => String(g.id) === prev)) {
+                return prev;
+              }
+              return myGroups[0].id.toString();
+            });
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          showToast("Error al cargar los grupos", "error");
         }
       }
-    } catch (err) {
-      showToast("Error al cargar los grupos", "error");
-    }
-  }, [user.user_id, showToast, selectedGroupId, location.state?.groupId]);
+    };
 
-  useEffect(() => {
-    fetchGroups();
-  }, [fetchGroups]);
+    if (user) {
+      loadTeacherGroups();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, showToast, location.state?.groupId, location.pathname, navigate]);
 
   // ── Cargar temas del grupo seleccionado ────────────────────────────────
   const fetchTopics = useCallback(async () => {
