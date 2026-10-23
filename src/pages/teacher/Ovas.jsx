@@ -119,7 +119,7 @@ export default function Ovas() {
       render: (_, row) => (
         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           <button
-            onClick={() => navigate(`/teacher/ovas/${row.id}`, { state: { ovaName: row.title }})}
+            onClick={() => navigate(`/teacher/ovas/${row.id}`, { state: { ovaName: row.title, topicName, groupName: location.state?.groupName }})}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100/80 rounded-lg transition-colors border border-emerald-200/60"
           >
             <span>Ver Contenido</span>
@@ -193,7 +193,7 @@ export default function Ovas() {
         data={ovas}
         isLoading={isLoading}
         emptyMessage="No hay Objetos Virtuales de Aprendizaje creados en este tema todavía. ¡Haz clic en 'Nuevo OVA' para agregar el primero!"
-        onRowClick={(row) => navigate(`/teacher/ovas/${row.id}`, { state: { ovaName: row.title }})}
+        onRowClick={(row) => navigate(`/teacher/ovas/${row.id}`, { state: { ovaName: row.title, topicName, groupName: location.state?.groupName }})}
       />
 
       <Modal
