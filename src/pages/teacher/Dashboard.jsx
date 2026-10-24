@@ -1,19 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
-import { BookOpen, Users, ClipboardList, LayoutDashboard, ArrowRight, RefreshCw } from "lucide-react";
+import { BookOpen, Users, ClipboardList, LayoutDashboard, ArrowRight, RefreshCw, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import EdaDashboard from "../../components/teacher/EdaDashboard";
 
 /**
  * Contenido de la página Dashboard del Docente.
- * Muestra métricas reales agregadas para el docente en sesión.
+ * Integra métricas reales y el Dashboard de Análisis Exploratorio de Datos (AED / EDA).
  */
 export default function TeacherDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [stats, setStats] = useState({
     groupsCount: 0,
     ovasCount: 0,
@@ -21,18 +22,23 @@ export default function TeacherDashboard() {
     groups: [],
   });
 
-  const fetchStats = useCallback(async () => {
+  // Estado para el módulo EDA
+  const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [attempts, setAttempts] = useState([]);
+  const [activityEvents, setActivityEvents] = useState([]);
+  const [isLoadingEda, setIsLoadingEda] = useState(false);
+
+  // 1. Cargar estadísticas generales y grupos del docente
+  const fetchStatsAndGroups = useCallback(async () => {
     if (!user) return;
-    setIsLoading(true);
+    setIsLoadingStats(true);
     try {
-      // 1. Obtener grupos del docente
       const { data: groupsRes } = await api.get("/api/v1/academic/groups");
       const allGroups = Array.isArray(groupsRes) ? groupsRes : (groupsRes.data || []);
       const myGroups = allGroups.filter(
         (g) => String(g.teacher_id) === String(user.user_id || user.id) && g.is_active
       );
 
-      // 2. Por cada grupo, consultar sus temas y OVAs en paralelo
       let totalOvas = 0;
       let totalExams = 0;
 
@@ -50,12 +56,12 @@ export default function TeacherDashboard() {
                   totalOvas += ovas.length;
                   totalExams += ovas.filter((o) => o.has_exam || o.exam_id).length;
                 } catch {
-                  // Ignorar errores silenciosos en subconsultas
+                  // ignorar errores silenciosos
                 }
               })
             );
           } catch {
-            // Ignorar errores silenciosos en subconsultas
+            // ignorar errores silenciosos
           }
         })
       );
@@ -66,16 +72,99 @@ export default function TeacherDashboard() {
         examsCount: totalExams,
         groups: myGroups,
       });
+
+      return myGroups;
     } catch (err) {
       console.error("[Dashboard] Error al cargar estadísticas:", err);
+      return [];
     } finally {
-      setIsLoading(false);
+      setIsLoadingStats(false);
     }
   }, [user]);
 
+  // 2. Cargar intentos y eventos de student_progress para el AED
+  const fetchEdaData = useCallback(async (currentGroups) => {
+    const targetGroups = currentGroups || stats.groups;
+    if (!targetGroups || targetGroups.length === 0) {
+      setAttempts([]);
+      setActivityEvents([]);
+      return;
+    }
+
+    setIsLoadingEda(true);
+    try {
+      const groupsToQuery = selectedGroupId
+        ? targetGroups.filter((g) => String(g.id) === String(selectedGroupId))
+        : targetGroups;
+
+      const groupDataList = await Promise.all(
+        groupsToQuery.map(async (group) => {
+          try {
+            const [attemptsRes, activityRes] = await Promise.all([
+              api.get(`/api/v1/academic/groups/${group.id}/attempts`).catch(() => ({ data: [] })),
+              api.get(`/api/v1/academic/groups/${group.id}/activity`).catch(() => ({ data: [] })),
+            ]);
+
+            const fetchedAttempts = Array.isArray(attemptsRes.data)
+              ? attemptsRes.data
+              : attemptsRes.data?.data || [];
+
+            const fetchedActivity = Array.isArray(activityRes.data)
+              ? activityRes.data
+              : activityRes.data?.data || [];
+
+            return {
+              attempts: fetchedAttempts.map((a) => ({
+                ...a,
+                group_id: group.id,
+                group_name: group.name,
+              })),
+              activity: fetchedActivity.map((ac) => ({
+                ...ac,
+                group_id: group.id,
+                group_name: group.name,
+              })),
+            };
+          } catch {
+            return { attempts: [], activity: [] };
+          }
+        })
+      );
+
+      const allAtts = groupDataList.flatMap((g) => g.attempts);
+      const allActs = groupDataList.flatMap((g) => g.activity);
+
+      setAttempts(allAtts);
+      setActivityEvents(allActs);
+    } catch (err) {
+      console.error("[Dashboard] Error al cargar datos para AED:", err);
+    } finally {
+      setIsLoadingEda(false);
+    }
+  }, [selectedGroupId, stats.groups]);
+
+  // Carga inicial coordinada
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    fetchStatsAndGroups().then((groups) => {
+      if (groups && groups.length > 0) {
+        fetchEdaData(groups);
+      }
+    });
+  }, [fetchStatsAndGroups]);
+
+  // Recargar EDA cuando cambia el grupo seleccionado
+  useEffect(() => {
+    if (stats.groups.length > 0) {
+      fetchEdaData(stats.groups);
+    }
+  }, [selectedGroupId, fetchEdaData, stats.groups]);
+
+  const handleRefreshAll = async () => {
+    const groups = await fetchStatsAndGroups();
+    if (groups && groups.length > 0) {
+      await fetchEdaData(groups);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -88,37 +177,37 @@ export default function TeacherDashboard() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold tracking-wide border border-indigo-500/30">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Portal Docente Activo
+              Portal Docente Activo · PGC 6° Semestre
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
               Bienvenido, {user?.full_name || user?.username || "Docente"}
             </h1>
             <p className="text-slate-300 text-sm max-w-xl leading-relaxed">
-              Supervisa el rendimiento académico de tus grupos, diseña evaluaciones interactivas y administra objetos virtuales de aprendizaje (OVAs).
+              Supervisa el rendimiento académico de tus grupos mediante analítica descriptiva, histogramas de frecuencia y trazabilidad en tiempo real.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <button
-              onClick={fetchStats}
-              disabled={isLoading}
+              onClick={handleRefreshAll}
+              disabled={isLoadingStats || isLoadingEda}
               className="p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-all shadow-sm active:scale-95"
               title="Actualizar datos"
             >
-              <RefreshCw size={18} className={isLoading ? "animate-spin text-indigo-400" : ""} />
+              <RefreshCw size={18} className={(isLoadingStats || isLoadingEda) ? "animate-spin text-indigo-400" : ""} />
             </button>
             <button
-              onClick={() => navigate("/teacher/groups")}
+              onClick={() => navigate("/teacher/results")}
               className="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/30 transition-all active:scale-95 flex items-center gap-2"
             >
-              <Users size={16} />
-              <span>Ver Cursos</span>
+              <BarChart3 size={16} />
+              <span>Ver Calificaciones</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── Stats Cards ─────────────────────────────────────────────────── */}
+      {/* ── Stats Cards de Conteo ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         {/* Mis Grupos */}
         <div 
@@ -137,7 +226,7 @@ export default function TeacherDashboard() {
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Mis Grupos</p>
             <div className="flex items-baseline gap-2 mt-1">
               <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                {isLoading ? "..." : stats.groupsCount}
+                {isLoadingStats ? "..." : stats.groupsCount}
               </h3>
               <span className="text-xs text-slate-400 font-medium">asignados</span>
             </div>
@@ -161,7 +250,7 @@ export default function TeacherDashboard() {
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">OVAs Creados</p>
             <div className="flex items-baseline gap-2 mt-1">
               <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                {isLoading ? "..." : stats.ovasCount}
+                {isLoadingStats ? "..." : stats.ovasCount}
               </h3>
               <span className="text-xs text-slate-400 font-medium">módulos</span>
             </div>
@@ -185,13 +274,24 @@ export default function TeacherDashboard() {
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Exámenes Activos</p>
             <div className="flex items-baseline gap-2 mt-1">
               <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                {isLoading ? "..." : stats.examsCount}
+                {isLoadingStats ? "..." : stats.examsCount}
               </h3>
               <span className="text-xs text-slate-400 font-medium">evaluaciones</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── MÓDULO PRINCIPAL: DASHBOARD DE ANALÍTICA EXPLORATORIA (AED) ───── */}
+      <EdaDashboard
+        groups={stats.groups}
+        selectedGroupId={selectedGroupId}
+        onGroupChange={setSelectedGroupId}
+        attempts={attempts}
+        activityEvents={activityEvents}
+        isLoading={isLoadingEda}
+        onRefresh={() => fetchEdaData(stats.groups)}
+      />
 
       {/* ── Panel de Accesos Rápidos a Grupos ────────────────────────────── */}
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200/70 p-6 sm:p-7">
@@ -211,7 +311,7 @@ export default function TeacherDashboard() {
           </button>
         </div>
 
-        {isLoading ? (
+        {isLoadingStats ? (
           <div className="flex justify-center py-12">
             <LoadingSpinner size="md" />
           </div>

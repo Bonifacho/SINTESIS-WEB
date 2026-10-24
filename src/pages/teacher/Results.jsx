@@ -1,19 +1,21 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Download, Search, ChevronDown, CheckCircle2, XCircle } from "lucide-react";
+import { Download, Search, ChevronDown, CheckCircle2, XCircle, BarChart3, ClipboardList } from "lucide-react";
 import api from "../../api/client";
 import { useToast } from "../../components/Toast";
 import { useAuth } from "../../context/AuthContext";
+import EdaDashboard from "../../components/teacher/EdaDashboard";
 
 const PAGE_SIZE = 6;
 
 /**
  * TeacherResults — Vista de resultados de exámenes de los grupos docentes
- * alineada con el boceto visual (Boceto 3).
+ * alineada con el boceto visual (Boceto 3) y modo de Análisis Exploratorio (AED).
  */
 export default function TeacherResults() {
   const { user } = useAuth();
   const { showToast, ToastContainer } = useToast();
 
+  const [viewMode, setViewMode] = useState("table"); // "table" | "eda"
   const [groups, setGroups] = useState([]);
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all"); // "all" | "passed" | "failed"
@@ -21,6 +23,7 @@ export default function TeacherResults() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [allAttempts, setAllAttempts] = useState([]);
+  const [activityEvents, setActivityEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // 1. Cargar grupos del docente
@@ -53,15 +56,20 @@ export default function TeacherResults() {
 
       const groupResultsPromises = targetGroups.map(async (group) => {
         try {
-          const [attemptsRes, groupDetailsRes, topicsRes] = await Promise.all([
+          const [attemptsRes, groupDetailsRes, topicsRes, activityRes] = await Promise.all([
             api.get(`/api/v1/academic/groups/${group.id}/attempts`).catch(() => ({ data: [] })),
             api.get(`/api/v1/academic/groups/${group.id}`).catch(() => ({ data: {} })),
             api.get(`/api/v1/academic/groups/${group.id}/topics`).catch(() => ({ data: [] })),
+            api.get(`/api/v1/academic/groups/${group.id}/activity`).catch(() => ({ data: [] })),
           ]);
 
           const fetchedAttempts = Array.isArray(attemptsRes.data)
             ? attemptsRes.data
             : attemptsRes.data?.data || [];
+
+          const fetchedActivity = Array.isArray(activityRes.data)
+            ? activityRes.data
+            : activityRes.data?.data || [];
 
           const enrolledStudents =
             groupDetailsRes.data?.data?.students || groupDetailsRes.data?.students || [];
@@ -102,14 +110,22 @@ export default function TeacherResults() {
               exam_clean_title: cleanExamTitle,
             };
           });
+
+          return {
+            attempts: mappedAttempts,
+            activity: fetchedActivity.map((ac) => ({ ...ac, group_id: group.id, group_name: group.name })),
+          };
         } catch {
-          return [];
+          return { attempts: [], activity: [] };
         }
       });
 
-      const nestedAttempts = await Promise.all(groupResultsPromises);
-      const combined = nestedAttempts.flat();
-      setAllAttempts(combined);
+      const nestedResults = await Promise.all(groupResultsPromises);
+      const combinedAttempts = nestedResults.flatMap((r) => r.attempts || []);
+      const combinedActivity = nestedResults.flatMap((r) => r.activity || []);
+
+      setAllAttempts(combinedAttempts);
+      setActivityEvents(combinedActivity);
     } catch {
       showToast("Error al cargar los resultados de exámenes", "error");
     } finally {
@@ -199,53 +215,95 @@ export default function TeacherResults() {
     <>
       <ToastContainer />
 
-      {/* ── Header: Título y Botón Exportar CSV (Boceto 3) ──────────────── */}
+      {/* ── Header: Título y Selector de Vista (Tabla vs AED) ──────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Resultados
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Resultados de exámenes de tus grupos
+            Resultados de exámenes y analítica exploratoria de tus grupos
           </p>
         </div>
 
-        <button
-          onClick={handleExportCSV}
-          className="flex items-center gap-2 bg-white hover:bg-slate-50 active:scale-[0.98] text-slate-800 font-semibold py-2.5 px-4 rounded-xl border border-slate-200/90 shadow-xs transition-all text-sm"
-        >
-          <Download size={17} className="text-slate-700" />
-          Exportar CSV
-        </button>
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          {/* Segmented control: Tabla vs Dashboard AED */}
+          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/80 shadow-inner">
+            <button
+              onClick={() => setViewMode("table")}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                viewMode === "table"
+                  ? "bg-white text-indigo-600 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <ClipboardList size={14} />
+              <span>Tabla</span>
+            </button>
+            <button
+              onClick={() => setViewMode("eda")}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                viewMode === "eda"
+                  ? "bg-white text-indigo-600 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <BarChart3 size={14} />
+              <span>Dashboard AED</span>
+            </button>
+          </div>
+
+          {viewMode === "table" && (
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-2 bg-white hover:bg-slate-50 active:scale-[0.98] text-slate-800 font-semibold py-2 px-3.5 rounded-xl border border-slate-200/90 shadow-xs transition-all text-xs"
+            >
+              <Download size={15} className="text-slate-700" />
+              <span>Exportar CSV</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* ── Barra de Filtros (Boceto 3) ─────────────────────────────────── */}
-      <div className="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-5 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
-          {/* Filtro: Grupo */}
-          <div className="lg:col-span-3">
-            <label className="block text-xs font-bold text-slate-600 mb-1.5">
-              Grupo
-            </label>
-            <div className="relative">
-              <select
-                value={selectedGroupId}
-                onChange={(e) => setSelectedGroupId(e.target.value)}
-                className="w-full appearance-none pl-3.5 pr-9 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all cursor-pointer"
-              >
-                <option value="">Todos los grupos</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                size={16}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-              />
-            </div>
-          </div>
+      {viewMode === "eda" ? (
+        <EdaDashboard
+          groups={groups}
+          selectedGroupId={selectedGroupId}
+          onGroupChange={setSelectedGroupId}
+          attempts={allAttempts}
+          activityEvents={activityEvents}
+          isLoading={isLoading}
+          onRefresh={fetchAllResults}
+        />
+      ) : (
+        <>
+          {/* ── Barra de Filtros (Boceto 3) ─────────────────────────────────── */}
+          <div className="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-5 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
+              {/* Filtro: Grupo */}
+              <div className="lg:col-span-3">
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">
+                  Grupo
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedGroupId}
+                    onChange={(e) => setSelectedGroupId(e.target.value)}
+                    className="w-full appearance-none pl-3.5 pr-9 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all cursor-pointer"
+                  >
+                    <option value="">Todos los grupos</option>
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={16}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  />
+                </div>
+              </div>
 
           {/* Filtro: Estado */}
           <div className="lg:col-span-3">
@@ -417,6 +475,8 @@ export default function TeacherResults() {
           </div>
         </div>
       </div>
+        </>
+      )}
     </>
   );
 }
